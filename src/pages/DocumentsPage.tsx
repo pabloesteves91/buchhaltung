@@ -5,12 +5,13 @@ import { PageHeader } from '@/components/PageHeader'
 import { Badge, Button, Card, EmptyState, TableWrap } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { DOCUMENT_TYPE_LABEL, useDocuments } from '@/hooks/useDocuments'
-import { useShopifyOrders, type ShopifyBookingStatus } from '@/hooks/useShopify'
+import { useShopifyOrders } from '@/hooks/useShopify'
 import { amountPaid } from '@/lib/documentTotals'
+import { orderIsPaid } from '@/lib/shopifyDocument'
 import { formatCHF, formatDate } from '@/lib/format'
-import type { BusinessDocument, DocumentStatus, DocumentType } from '@/lib/types'
+import type { DocumentStatus, DocumentType } from '@/lib/types'
 
-type Tab = DocumentType | 'all' | 'shopify'
+type Tab = DocumentType | 'all'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'all', label: 'Alle' },
@@ -18,7 +19,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'rechnung', label: 'Rechnungen' },
   { key: 'gutschrift', label: 'Gutschriften' },
   { key: 'lieferschein', label: 'Lieferscheine' },
-  { key: 'shopify', label: 'Shopify-Bestellungen' },
 ]
 
 const STATUS: Record<DocumentStatus, { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }> = {
@@ -30,33 +30,76 @@ const STATUS: Record<DocumentStatus, { label: string; tone: 'slate' | 'green' | 
   storniert: { label: 'Storniert', tone: 'slate' },
 }
 
-const ORDER_STATUS: Record<ShopifyBookingStatus, { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }> = {
-  open: { label: 'Nicht verbucht', tone: 'amber' },
-  booked: { label: 'Verbucht', tone: 'green' },
-  cancelled: { label: 'Storniert', tone: 'slate' },
-  refunded: { label: 'Retoure verbucht', tone: 'blue' },
-  refund_pending: { label: 'Retoure offen', tone: 'red' },
+interface Row {
+  key: string
+  to: string
+  number: string
+  typeLabel: string
+  isShopify: boolean
+  customer: string
+  customerLink?: string
+  date: string
+  total: number
+  statusLabel: string
+  statusTone: 'slate' | 'green' | 'amber' | 'red' | 'blue'
 }
 
 export function DocumentsPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('all')
-  const { data: docs, isLoading } = useDocuments(
-    tab === 'all' || tab === 'shopify' ? undefined : tab,
-  )
+  const { data: docs, isLoading } = useDocuments(tab === 'all' ? undefined : tab)
   const { data: orders } = useShopifyOrders()
 
+  // Shopify orders behave like sales invoices → show them in "Alle" and "Rechnungen".
+  const showOrders = tab === 'all' || tab === 'rechnung'
+
+  const rows = useMemo<Row[]>(() => {
+    const docRows: Row[] = (docs ?? []).map((d) => ({
+      key: `doc-${d.id}`,
+      to: `/dokumente/${d.id}`,
+      number: d.number,
+      typeLabel: DOCUMENT_TYPE_LABEL[d.type],
+      isShopify: false,
+      customer: d.recipientSnapshot.name,
+      customerLink: d.contactId ? `/kunden/${d.contactId}` : undefined,
+      date: d.date,
+      total: d.total,
+      statusLabel: STATUS[d.status].label,
+      statusTone: STATUS[d.status].tone,
+    }))
+    const orderRows: Row[] = showOrders
+      ? (orders ?? []).map((o) => ({
+          key: `order-${o.id}`,
+          to: `/shopify/bestellung/${o.id}`,
+          number: o.orderName,
+          typeLabel: 'Shopify',
+          isShopify: true,
+          customer: o.customerName,
+          customerLink: o.contactId ? `/kunden/${o.contactId}` : undefined,
+          date: o.date,
+          total: o.total,
+          statusLabel: orderIsPaid(o) ? 'Bezahlt' : 'Offen',
+          statusTone: orderIsPaid(o) ? 'green' : 'amber',
+        }))
+      : []
+    return [...docRows, ...orderRows].sort((a, b) => (a.date < b.date ? 1 : -1))
+  }, [docs, orders, showOrders])
+
   const openInvoiceTotal = useMemo(() => {
-    return (docs ?? [])
+    const fromDocs = (docs ?? [])
       .filter((d) => d.type === 'rechnung' && ['versendet', 'teilbezahlt', 'ueberfaellig'].includes(d.status))
       .reduce((s, d) => s + (d.total - amountPaid(d)), 0)
-  }, [docs])
+    const fromOrders = (orders ?? [])
+      .filter((o) => !orderIsPaid(o) && o.bookingStatus !== 'cancelled')
+      .reduce((s, o) => s + o.total, 0)
+    return fromDocs + fromOrders
+  }, [docs, orders])
 
   return (
     <>
       <PageHeader
         title="Offerten & Rechnungen"
-        subtitle="Dokumente und Shopify-Bestellungen an einem Ort."
+        subtitle="Eigene Dokumente und Shopify-Bestellungen an einem Ort."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => navigate('/dokumente/neu?typ=offerte')}>
@@ -71,7 +114,7 @@ export function DocumentsPage() {
 
       {openInvoiceTotal > 0 && (
         <Card className="mb-4">
-          <p className="text-xs text-slate-500">Offene Rechnungen</p>
+          <p className="text-xs text-slate-500">Offen (Rechnungen + unbezahlte Shopify-Bestellungen)</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCHF(openInvoiceTotal)}</p>
         </Card>
       )}
@@ -87,76 +130,16 @@ export function DocumentsPage() {
             )}
           >
             {t.label}
-            {t.key === 'shopify' && (orders?.length ?? 0) > 0 && (
-              <span className="ml-1.5 text-xs opacity-70">({orders?.length})</span>
-            )}
           </button>
         ))}
       </div>
 
-      {tab === 'shopify' ? (
-        (orders?.length ?? 0) === 0 ? (
-          <EmptyState
-            title="Keine Shopify-Bestellungen"
-            description="Verbinde Shopify und importiere die Bestellungen."
-            action={<Button onClick={() => navigate('/shopify')}>Zu Shopify</Button>}
-          />
-        ) : (
-          <Card>
-            <TableWrap>
-              <table className="w-full min-w-[560px] text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
-                    <th className="py-2">Bestellung</th>
-                    <th className="py-2">Kunde</th>
-                    <th className="py-2">Datum</th>
-                    <th className="py-2">Zahlung</th>
-                    <th className="py-2 text-right">Total</th>
-                    <th className="py-2 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(orders ?? []).map((o) => (
-                    <tr
-                      key={o.id}
-                      className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                      onClick={() => navigate(`/shopify/bestellung/${o.id}`)}
-                    >
-                      <td className="py-2 font-medium text-slate-700">{o.orderName}</td>
-                      <td className="py-2 text-slate-600">
-                        {o.contactId ? (
-                          <Link
-                            to={`/kunden/${o.contactId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="hover:underline"
-                          >
-                            {o.customerName}
-                          </Link>
-                        ) : (
-                          o.customerName
-                        )}
-                      </td>
-                      <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(o.date)}</td>
-                      <td className="py-2 text-slate-500">{o.financialStatus}</td>
-                      <td className="py-2 text-right font-medium">{formatCHF(o.total)}</td>
-                      <td className="py-2 text-right">
-                        <Badge tone={ORDER_STATUS[o.bookingStatus].tone}>
-                          {ORDER_STATUS[o.bookingStatus].label}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableWrap>
-          </Card>
-        )
-      ) : isLoading ? (
+      {isLoading ? (
         <p className="text-sm text-slate-400">Laden …</p>
-      ) : (docs?.length ?? 0) === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState
           title="Noch keine Dokumente"
-          description="Erstelle eine Offerte oder Rechnung – Kunde wählen, Positionen erfassen, als PDF exportieren."
+          description="Erstelle eine Offerte oder Rechnung – oder importiere die Shopify-Bestellungen."
           action={
             <Button onClick={() => navigate('/dokumente/neu?typ=rechnung')}>Rechnung erstellen</Button>
           }
@@ -176,23 +159,41 @@ export function DocumentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {(docs as BusinessDocument[]).map((d) => (
+                {rows.map((r) => (
                   <tr
-                    key={d.id}
+                    key={r.key}
                     className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                    onClick={() => navigate(`/dokumente/${d.id}`)}
+                    onClick={() => navigate(r.to)}
                   >
                     <td className="py-2 font-medium text-slate-700">
-                      <Link to={`/dokumente/${d.id}`} onClick={(e) => e.stopPropagation()}>
-                        {d.number}
+                      <Link to={r.to} onClick={(e) => e.stopPropagation()}>
+                        {r.number}
                       </Link>
                     </td>
-                    <td className="py-2 text-slate-500">{DOCUMENT_TYPE_LABEL[d.type]}</td>
-                    <td className="py-2 text-slate-600">{d.recipientSnapshot.name}</td>
-                    <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(d.date)}</td>
-                    <td className="py-2 text-right font-medium">{formatCHF(d.total)}</td>
+                    <td className="py-2">
+                      {r.isShopify ? (
+                        <Badge tone="blue">Shopify</Badge>
+                      ) : (
+                        <span className="text-slate-500">{r.typeLabel}</span>
+                      )}
+                    </td>
+                    <td className="py-2 text-slate-600">
+                      {r.customerLink ? (
+                        <Link
+                          to={r.customerLink}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:underline"
+                        >
+                          {r.customer}
+                        </Link>
+                      ) : (
+                        r.customer
+                      )}
+                    </td>
+                    <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(r.date)}</td>
+                    <td className="py-2 text-right font-medium">{formatCHF(r.total)}</td>
                     <td className="py-2 text-right">
-                      <Badge tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Badge>
+                      <Badge tone={r.statusTone}>{r.statusLabel}</Badge>
                     </td>
                   </tr>
                 ))}
