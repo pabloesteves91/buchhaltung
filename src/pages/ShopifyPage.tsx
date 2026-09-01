@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, RefreshCw, Store } from 'lucide-react'
+import { CheckCircle2, RefreshCw, Store, Upload } from 'lucide-react'
+import { importShopifyOrdersCsv } from '@/lib/shopifyCsv'
+import { bookShopifyOrderLocal, unbookShopifyOrderLocal } from '@/lib/shopifyBooking'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge, Button, Card, EmptyState, Field, Input, Select, TableWrap } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -43,14 +46,64 @@ export function ShopifyPage() {
   const saveConfig = useSaveShopifyConfig()
   const { data: accounts } = useAccounts()
   const { data: orders } = useShopifyOrders()
-  const { test, importOrders, book, unbook, registerWebhooks } = useShopifyActions()
+  const { test, importOrders, registerWebhooks } = useShopifyActions()
 
+  const qc = useQueryClient()
+  const csvInput = useRef<HTMLInputElement>(null)
+  const [csvBusy, setCsvBusy] = useState(false)
   const [filter, setFilter] = useState<ShopifyBookingStatus | 'all'>('open')
   const [sinceDays, setSinceDays] = useState(90)
   const [form, setForm] = useState({ shopDomain: '', adminApiToken: '', apiSecretKey: '' })
   const [msg, setMsg] = useState<string | null>(null)
 
+  async function handleCsv(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvBusy(true)
+    setMsg(null)
+    try {
+      const text = await file.text()
+      const r = await importShopifyOrdersCsv(text, { createContacts: cfg.createContacts ?? true })
+      qc.invalidateQueries({ queryKey: ['shopifyOrders'] })
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+      setMsg(
+        `${r.imported} Bestellungen importiert, ${r.skipped} übersprungen (schon vorhanden), ${r.contactsCreated} neue Kunden.`,
+      )
+    } catch (err) {
+      setMsg(friendlyError(err))
+    } finally {
+      setCsvBusy(false)
+      if (csvInput.current) csvInput.current.value = ''
+    }
+  }
+
   const cfg = config ?? {}
+
+  const book = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const list = orders ?? []
+      for (const id of ids) {
+        const o = list.find((x) => x.orderId === id || x.id === id)
+        if (o) await bookShopifyOrderLocal(o, cfg)
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopifyOrders'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+    },
+    onError: (e) => setMsg(friendlyError(e)),
+  })
+  const unbook = useMutation({
+    mutationFn: async (orderKey: string) => {
+      const o = (orders ?? []).find((x) => x.orderId === orderKey || x.id === orderKey)
+      if (o) await unbookShopifyOrderLocal(o)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopifyOrders'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+
   const revenueAccounts = (accounts ?? []).filter((a) => a.type === 'ertrag' && a.active)
   const moneyAccounts = (accounts ?? []).filter((a) => a.type === 'aktiven' && a.active)
   const expenseAccounts = (accounts ?? []).filter((a) => a.type === 'aufwand' && a.active)
@@ -196,7 +249,32 @@ export function ShopifyPage() {
         )}
       </Card>
 
-      {isConfigured && (
+      {/* CSV import — works without any API setup */}
+      <Card title="Import aus CSV" className="mb-6">
+        <p className="text-sm text-slate-500">
+          Alternative ohne API: in Shopify unter <em>Bestellungen → Exportieren</em> eine CSV
+          herunterladen und hier hochladen. Doppelte werden automatisch übersprungen.
+        </p>
+        <input
+          ref={csvInput}
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleCsv}
+          className="hidden"
+        />
+        <Button
+          variant="secondary"
+          className="mt-3"
+          onClick={() => csvInput.current?.click()}
+          disabled={csvBusy}
+        >
+          <Upload className="size-4" />
+          {csvBusy ? 'Importiere …' : 'CSV hochladen'}
+        </Button>
+        {msg && !isConfigured && <p className="mt-3 text-sm text-slate-600">{msg}</p>}
+      </Card>
+
+      {(isConfigured || (orders?.length ?? 0) > 0) && (
         <>
           {/* Account mapping */}
           <Card title="Kontozuordnung" className="mb-6">
@@ -228,6 +306,7 @@ export function ShopifyPage() {
           </Card>
 
           {/* Actions */}
+          {isConfigured && (
           <Card title="Import & Automatik" className="mb-6">
             <div className="flex flex-wrap items-end gap-3">
               <Field label="Zeitraum">
@@ -275,6 +354,7 @@ export function ShopifyPage() {
             </div>
             {msg && <p className="mt-3 text-sm text-slate-600">{msg}</p>}
           </Card>
+          )}
 
           {/* Orders */}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -296,11 +376,11 @@ export function ShopifyPage() {
               <Button
                 size="sm"
                 onClick={() =>
-                  book.mutate({
-                    orderId: (orders ?? [])
+                  book.mutate(
+                    (orders ?? [])
                       .filter((o) => o.bookingStatus === 'open')
                       .map((o) => o.orderId),
-                  })
+                  )
                 }
                 disabled={book.isPending}
               >
@@ -359,7 +439,7 @@ export function ShopifyPage() {
                           {o.bookingStatus === 'open' && (
                             <button
                               className="text-xs font-medium text-brand-600 hover:underline"
-                              onClick={() => book.mutate({ orderId: o.orderId })}
+                              onClick={() => book.mutate([o.orderId])}
                             >
                               Verbuchen
                             </button>
@@ -367,7 +447,7 @@ export function ShopifyPage() {
                           {o.bookingStatus === 'booked' && (
                             <button
                               className="text-xs text-slate-400 hover:text-red-600"
-                              onClick={() => unbook.mutate({ orderId: o.orderId })}
+                              onClick={() => unbook.mutate(o.orderId)}
                             >
                               Rückgängig
                             </button>

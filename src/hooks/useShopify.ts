@@ -32,6 +32,7 @@ export interface ShopifyOrderDoc {
   bookingStatus: ShopifyBookingStatus
   bookedTransactionIds?: string[]
   pendingRefund?: number
+  source?: 'shopify' | 'csv'
   lineItems: { title: string; quantity: number; price: number }[]
 }
 
