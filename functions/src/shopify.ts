@@ -456,52 +456,71 @@ interface ShopifyProduct {
 }
 
 /** Import Shopify products/variants into the `products` collection for the
- *  invoice/offer line-item picker. */
-export const importShopifyProducts = onCall({ region: REGION }, guard(async () => {
-  const cfg = await getConfig()
-  let path: string | null = '/products.json?limit=250&status=active'
-  let created = 0
-  let updated = 0
-  const seen = new Set<string>()
-  while (path) {
-    const res: Response = await shopifyFetch(cfg, path)
-    const { products } = (await res.json()) as { products: ShopifyProduct[] }
-    for (const p of products) {
-      for (const v of p.variants ?? []) {
-        const id = String(v.id)
-        seen.add(id)
-        const isDefault = !v.title || v.title === 'Default Title'
-        const ref = db().doc(`products/${id}`)
-        const existed = (await ref.get()).exists
-        await ref.set(
-          {
-            source: 'shopify',
-            shopifyProductId: String(p.id),
-            shopifyVariantId: id,
-            title: isDefault ? p.title : `${p.title} – ${v.title}`,
-            sku: v.sku ?? '',
-            price: num(v.price),
-            unit: 'Stk',
-            active: p.status === 'active',
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        )
-        if (existed) updated++
-        else created++
+ *  invoice/offer line-item picker. Batched writes so it stays well inside the
+ *  callable timeout even with hundreds of variants. */
+export const importShopifyProducts = onCall(
+  { region: REGION, timeoutSeconds: 300 },
+  guard(async () => {
+    const cfg = await getConfig()
+    let path: string | null = '/products.json?limit=250&status=active'
+    let count = 0
+    const seen = new Set<string>()
+    let batch = db().batch()
+    let inBatch = 0
+    const flush = async () => {
+      if (inBatch > 0) {
+        await batch.commit()
+        batch = db().batch()
+        inBatch = 0
       }
     }
-    const link = res.headers.get('link') ?? ''
-    const next = link.match(/<[^>]*[?&]page_info=([^>&]+)[^>]*>;\s*rel="next"/)
-    path = next ? `/products.json?limit=250&page_info=${next[1]}` : null
-  }
-  // Mark products that vanished from Shopify as inactive.
-  const all = await db().collection('products').where('source', '==', 'shopify').get()
-  for (const doc of all.docs) {
-    if (!seen.has(doc.id)) await doc.ref.set({ active: false }, { merge: true })
-  }
-  return { created, updated }
-}))
+
+    while (path) {
+      const res: Response = await shopifyFetch(cfg, path)
+      const { products } = (await res.json()) as { products: ShopifyProduct[] }
+      for (const p of products) {
+        for (const v of p.variants ?? []) {
+          const id = String(v.id)
+          seen.add(id)
+          const isDefault = !v.title || v.title === 'Default Title'
+          batch.set(
+            db().doc(`products/${id}`),
+            {
+              source: 'shopify',
+              shopifyProductId: String(p.id),
+              shopifyVariantId: id,
+              title: isDefault ? p.title : `${p.title} – ${v.title}`,
+              sku: v.sku ?? '',
+              price: num(v.price),
+              unit: 'Stk',
+              active: p.status === 'active',
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          )
+          count++
+          if (++inBatch >= 400) await flush()
+        }
+      }
+      const link = res.headers.get('link') ?? ''
+      const next = link.match(/<[^>]*[?&]page_info=([^>&]+)[^>]*>;\s*rel="next"/)
+      path = next ? `/products.json?limit=250&page_info=${next[1]}` : null
+    }
+    await flush()
+
+    // Mark products that vanished from Shopify as inactive.
+    const all = await db().collection('products').where('source', '==', 'shopify').get()
+    for (const doc of all.docs) {
+      if (!seen.has(doc.id)) {
+        batch.set(doc.ref, { active: false }, { merge: true })
+        if (++inBatch >= 400) await flush()
+      }
+    }
+    await flush()
+
+    return { created: count, updated: 0 }
+  }),
+)
 
 interface ShopifyCustomer {
   id: number
