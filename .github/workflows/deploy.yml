@@ -54,7 +54,8 @@ jobs:
         run: npx firebase-tools deploy --only firestore,storage --non-interactive
         continue-on-error: true
 
-      # Cloud Functions — only relevant once Shopify / email are wired up.
+      # Cloud Functions. Requires Cloud Build / Functions / Run / Artifact Registry
+      # APIs to be enabled once by a project owner (see README). Runs after hosting,
+      # so a failure here surfaces in red without holding back the web app.
       - name: Deploy Cloud Functions
         run: npx firebase-tools deploy --only functions --non-interactive --force
-        continue-on-error: true

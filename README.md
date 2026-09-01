@@ -66,6 +66,12 @@ npm run dev
 
 Danach deployt jeder Push auf `main` automatisch (`.github/workflows/deploy.yml`).
 
+**Einmalig für Cloud Functions:** als Projekt-Owner (`firebase login`) lokal
+`npx firebase deploy --only functions` ausführen – das aktiviert die nötigen Google-APIs
+(Cloud Build, Cloud Functions, Cloud Run, Artifact Registry). Danach kann auch der
+CI-Deploy Functions ausrollen. Alternativ die vier APIs in der Google Cloud Console
+manuell aktivieren.
+
 ### Integrations-Secrets (nach dem ersten Deploy)
 
 In Firestore das Dokument `secrets/integrations` anlegen (nur via Konsole/Admin):
