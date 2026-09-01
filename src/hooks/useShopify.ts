@@ -38,8 +38,8 @@ export interface ShopifyOrderDoc {
 
 export interface ShopifyConfig {
   shopDomain?: string
-  adminApiToken?: string
-  apiSecretKey?: string
+  clientId?: string
+  clientSecret?: string
   apiVersion?: string
   autoBook?: boolean
   createContacts?: boolean

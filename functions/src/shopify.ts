@@ -3,8 +3,8 @@
  *
  * Config lives in Firestore `settings/shopify` (owner-only, written from the app):
  *   shopDomain      "nipponnites.myshopify.com"
- *   adminApiToken   "shpat_..."            (Admin API access token of the custom app)
- *   apiSecretKey    "..."                  (custom app API secret – signs webhooks)
+ *   clientId        Dev Dashboard app Client-ID
+ *   clientSecret    Dev Dashboard app Client-Secret (shpss_… – also signs webhooks)
  *   apiVersion      "2025-01"
  *   autoBook        boolean
  *   createContacts  boolean
@@ -31,8 +31,9 @@ const WEBHOOK_TOPICS = [
 
 interface ShopifyConfig {
   shopDomain: string
-  adminApiToken: string
-  apiSecretKey?: string
+  /** Dev Dashboard app credentials (client credentials grant). */
+  clientId: string
+  clientSecret: string
   apiVersion: string
   autoBook: boolean
   createContacts: boolean
@@ -44,25 +45,64 @@ interface ShopifyConfig {
     refundId?: string
   }
   webhookIds?: number[]
+  /** Cached short-lived Admin API token from the client-credentials grant. */
+  accessToken?: string
+  accessTokenExpiresAt?: number
 }
 
 async function getConfig(): Promise<ShopifyConfig> {
   const snap = await db().doc('settings/shopify').get()
   if (!snap.exists) throw new HttpsError('failed-precondition', 'Shopify ist nicht konfiguriert.')
-  const d = snap.data() as Partial<ShopifyConfig>
-  if (!d.shopDomain || !d.adminApiToken) {
-    throw new HttpsError('failed-precondition', 'Shop-Domain oder Token fehlt.')
+  const d = snap.data() as Partial<ShopifyConfig> & { adminApiToken?: string; apiSecretKey?: string }
+  const clientId = d.clientId || ''
+  const clientSecret = d.clientSecret || d.apiSecretKey || ''
+  if (!d.shopDomain || !clientId || !clientSecret) {
+    throw new HttpsError('failed-precondition', 'Shop-Domain, Client-ID oder Client-Secret fehlt.')
   }
   return {
     shopDomain: d.shopDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
-    adminApiToken: d.adminApiToken,
-    apiSecretKey: d.apiSecretKey,
+    clientId,
+    clientSecret,
     apiVersion: d.apiVersion || '2025-01',
     autoBook: d.autoBook ?? false,
     createContacts: d.createContacts ?? true,
     accounts: d.accounts ?? {},
     webhookIds: d.webhookIds ?? [],
+    accessToken: d.accessToken,
+    accessTokenExpiresAt: d.accessTokenExpiresAt,
   }
+}
+
+/**
+ * The Dev Dashboard no longer exposes static Admin API tokens. We exchange the
+ * app's client_id / client_secret for a short-lived (24h) token via the client
+ * credentials grant and cache it in settings/shopify.
+ */
+async function getAccessToken(cfg: ShopifyConfig): Promise<string> {
+  if (cfg.accessToken && cfg.accessTokenExpiresAt && cfg.accessTokenExpiresAt - Date.now() > 60_000) {
+    return cfg.accessToken
+  }
+  const res = await fetch(`https://${cfg.shopDomain}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new HttpsError('internal', `Shopify Token-Grant ${res.status}: ${text.slice(0, 300)}`)
+  }
+  const json = (await res.json()) as { access_token: string; expires_in?: number }
+  const expiresAt = Date.now() + (json.expires_in ?? 86400) * 1000
+  await db()
+    .doc('settings/shopify')
+    .set({ accessToken: json.access_token, accessTokenExpiresAt: expiresAt }, { merge: true })
+  cfg.accessToken = json.access_token
+  cfg.accessTokenExpiresAt = expiresAt
+  return json.access_token
 }
 
 async function shopifyFetch(
@@ -70,11 +110,12 @@ async function shopifyFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  const token = await getAccessToken(cfg)
   const url = `https://${cfg.shopDomain}/admin/api/${cfg.apiVersion}${path}`
   const res = await fetch(url, {
     ...init,
     headers: {
-      'X-Shopify-Access-Token': cfg.adminApiToken,
+      'X-Shopify-Access-Token': token,
       'Content-Type': 'application/json',
       ...(init.headers ?? {}),
     },
@@ -418,7 +459,7 @@ export const registerShopifyWebhooks = onCall({ region: REGION }, async (req) =>
 
 export const shopifyWebhook = onRequest({ cors: false, region: REGION }, async (req, res) => {
   const cfg = await getConfig().catch(() => null)
-  const secret = cfg?.apiSecretKey
+  const secret = cfg?.clientSecret
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256') ?? ''
   const topic = req.get('X-Shopify-Topic') ?? ''
 

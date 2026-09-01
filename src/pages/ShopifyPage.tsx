@@ -53,7 +53,7 @@ export function ShopifyPage() {
   const [csvBusy, setCsvBusy] = useState(false)
   const [filter, setFilter] = useState<ShopifyBookingStatus | 'all'>('open')
   const [sinceDays, setSinceDays] = useState(90)
-  const [form, setForm] = useState({ shopDomain: '', adminApiToken: '', apiSecretKey: '' })
+  const [form, setForm] = useState({ shopDomain: '', clientId: '', clientSecret: '' })
   const [msg, setMsg] = useState<string | null>(null)
 
   async function handleCsv(e: React.ChangeEvent<HTMLInputElement>) {
@@ -154,7 +154,7 @@ export function ShopifyPage() {
 
   if (loading) return <p className="text-sm text-slate-400">Laden …</p>
 
-  const isConfigured = Boolean(cfg.shopDomain && cfg.adminApiToken)
+  const isConfigured = Boolean(cfg.shopDomain && cfg.clientId && cfg.clientSecret)
 
   return (
     <>
@@ -194,7 +194,7 @@ export function ShopifyPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => saveConfig.mutate({ shopDomain: '', adminApiToken: '', apiSecretKey: '' })}
+                onClick={() => saveConfig.mutate({ shopDomain: '', clientId: '', clientSecret: '' })}
               >
                 Zugang ändern
               </Button>
@@ -204,30 +204,31 @@ export function ShopifyPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-slate-500">
-              In Shopify unter <em>Einstellungen → Apps und Vertriebskanäle → Apps entwickeln</em> eine
-              Custom App erstellen, Admin-API-Zugriff auf Bestellungen/Kunden erlauben und die Schlüssel
-              hier eintragen.
+              Im Shopify <em>Dev Dashboard</em> deine App öffnen → <em>App-Einstellungen</em> →
+              Abschnitt <em>Anmeldedaten</em>. Client-ID kopieren, beim Schlüssel aufs Auge klicken
+              und kopieren. Die App muss auf deinem Shop installiert sein, mit Zugriff auf
+              Bestellungen, Kunden und Produkte.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Shop-Domain">
                 <Input
-                  placeholder="nipponnites.myshopify.com"
+                  placeholder="deinshop.myshopify.com"
                   value={form.shopDomain}
                   onChange={(e) => setForm({ ...form, shopDomain: e.target.value })}
                 />
               </Field>
-              <Field label="Admin API Access Token">
+              <Field label="Client-ID">
                 <Input
-                  placeholder="shpat_…"
-                  value={form.adminApiToken}
-                  onChange={(e) => setForm({ ...form, adminApiToken: e.target.value })}
+                  placeholder="cbc51fe1c98b…"
+                  value={form.clientId}
+                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
                 />
               </Field>
-              <Field label="API Secret Key" hint="Für die Webhook-Signaturprüfung.">
+              <Field label="Client-Secret (Schlüssel)" hint="Wird auch für die Webhook-Signatur verwendet.">
                 <Input
-                  placeholder="…"
-                  value={form.apiSecretKey}
-                  onChange={(e) => setForm({ ...form, apiSecretKey: e.target.value })}
+                  placeholder="shpss_…"
+                  value={form.clientSecret}
+                  onChange={(e) => setForm({ ...form, clientSecret: e.target.value })}
                 />
               </Field>
             </div>
@@ -235,13 +236,13 @@ export function ShopifyPage() {
               onClick={() =>
                 saveConfig.mutate({
                   shopDomain: form.shopDomain.trim(),
-                  adminApiToken: form.adminApiToken.trim(),
-                  apiSecretKey: form.apiSecretKey.trim(),
+                  clientId: form.clientId.trim(),
+                  clientSecret: form.clientSecret.trim(),
                   apiVersion: '2025-01',
                   createContacts: true,
                 })
               }
-              disabled={!form.shopDomain || !form.adminApiToken}
+              disabled={!form.shopDomain || !form.clientId || !form.clientSecret}
             >
               Speichern
             </Button>
@@ -347,7 +348,7 @@ export function ShopifyPage() {
                     setMsg(friendlyError(e))
                   }
                 }}
-                disabled={registerWebhooks.isPending || !cfg.apiSecretKey}
+                disabled={registerWebhooks.isPending}
               >
                 Webhooks registrieren
               </Button>
