@@ -17,7 +17,13 @@ import {
 import { useAccounts } from '@/hooks/useAccounts'
 import { useProducts } from '@/hooks/useProducts'
 import { useCreateTransaction } from '@/hooks/useTransactions'
-import { amountPaid, computeTotals, newLineItem, openAmount } from '@/lib/documentTotals'
+import {
+  amountPaid,
+  computeTotals,
+  newDiscount,
+  newLineItem,
+  openAmount,
+} from '@/lib/documentTotals'
 import { DocumentPdf } from '@/pdf/DocumentPdf'
 import { buildQrBillPng } from '@/pdf/qrBill'
 import { downloadDocumentPdf, emailDocument } from '@/pdf/pdfActions'
@@ -25,6 +31,7 @@ import { fiscalYearOf, formatCHF, round2, todayIso } from '@/lib/format'
 import type {
   BusinessDocument,
   Contact,
+  DocumentDiscount,
   DocumentStatus,
   DocumentType,
   LineItem,
@@ -63,6 +70,8 @@ interface EditorState {
   dueDate: string
   lineItems: LineItem[]
   globalDiscountPct: number
+  discounts: DocumentDiscount[]
+  shipping: number
   introText: string
   outroText: string
   note: string
@@ -130,6 +139,8 @@ export function DocumentEditorPage() {
         dueDate: addDays(date, settings.invoice.defaultPaymentTermDays),
         lineItems: [newLineItem()],
         globalDiscountPct: 0,
+        discounts: [],
+        shipping: 0,
         introText: settings.invoice.defaultIntroText,
         outroText: settings.invoice.defaultOutroText,
         note: '',
@@ -144,6 +155,8 @@ export function DocumentEditorPage() {
         dueDate: existing.dueDate ?? '',
         lineItems: existing.lineItems.length ? existing.lineItems : [newLineItem()],
         globalDiscountPct: existing.globalDiscountPct,
+        discounts: existing.discounts ?? [],
+        shipping: existing.shipping ?? 0,
         introText: existing.introText ?? '',
         outroText: existing.outroText ?? '',
         note: existing.note ?? '',
@@ -155,8 +168,14 @@ export function DocumentEditorPage() {
   const totals = useMemo(
     () =>
       state
-        ? computeTotals(state.lineItems, state.globalDiscountPct, state.type)
-        : { subtotal: 0, discountTotal: 0, total: 0, roundingDelta: 0 },
+        ? computeTotals({
+            lineItems: state.lineItems,
+            type: state.type,
+            globalDiscountPct: state.globalDiscountPct,
+            discounts: state.discounts,
+            shipping: state.shipping,
+          })
+        : computeTotals({ lineItems: [], type: 'rechnung' }),
     [state],
   )
 
@@ -174,7 +193,12 @@ export function DocumentEditorPage() {
       currency: 'CHF',
       lineItems: state.lineItems,
       globalDiscountPct: state.globalDiscountPct,
-      ...totals,
+      discounts: state.discounts,
+      shipping: state.shipping,
+      subtotal: totals.subtotal,
+      discountTotal: totals.discountTotal,
+      total: totals.total,
+      roundingDelta: totals.roundingDelta,
       status: state.status,
       payments: existing?.payments ?? [],
       introText: state.introText || undefined,
@@ -212,11 +236,23 @@ export function DocumentEditorPage() {
     })
   }
 
+  function updateDiscount(discId: string, p: Partial<DocumentDiscount>) {
+    patch({
+      discounts: state!.discounts.map((d) => (d.id === discId ? { ...d, ...p } : d)),
+    })
+  }
+
   async function save(navigateAfter = true) {
     if (!state) return
     setSaving(true)
     try {
-      const t = computeTotals(state.lineItems, state.globalDiscountPct, state.type)
+      const t = computeTotals({
+        lineItems: state.lineItems,
+        type: state.type,
+        globalDiscountPct: state.globalDiscountPct,
+        discounts: state.discounts,
+        shipping: state.shipping,
+      })
       const base = {
         type: state.type,
         contactId: state.contactId,
@@ -227,7 +263,12 @@ export function DocumentEditorPage() {
         currency: 'CHF' as const,
         lineItems: state.lineItems,
         globalDiscountPct: state.globalDiscountPct,
-        ...t,
+        discounts: state.discounts,
+        shipping: state.shipping,
+        subtotal: t.subtotal,
+        discountTotal: t.discountTotal,
+        total: t.total,
+        roundingDelta: t.roundingDelta,
         status: state.status,
         introText: state.introText || undefined,
         outroText: state.outroText || undefined,
@@ -349,7 +390,13 @@ export function DocumentEditorPage() {
       fiscalYearOf(todayIso()),
       settings!.invoice.numberPrefix.rechnung,
     )
-    const t = computeTotals(existing.lineItems, existing.globalDiscountPct, 'rechnung')
+    const t = computeTotals({
+      lineItems: existing.lineItems,
+      type: 'rechnung',
+      globalDiscountPct: existing.globalDiscountPct,
+      discounts: existing.discounts,
+      shipping: existing.shipping,
+    })
     const newId = await createDoc.mutateAsync({
       ...existing,
       type: 'rechnung',
@@ -357,7 +404,10 @@ export function DocumentEditorPage() {
       date: todayIso(),
       dueDate: addDays(todayIso(), settings!.invoice.defaultPaymentTermDays),
       fiscalYear: fiscalYearOf(todayIso()),
-      ...t,
+      subtotal: t.subtotal,
+      discountTotal: t.discountTotal,
+      total: t.total,
+      roundingDelta: t.roundingDelta,
       status: 'entwurf',
       payments: [],
       dunningLevel: 0,
@@ -558,6 +608,119 @@ export function DocumentEditorPage() {
             </Button>
           </Card>
 
+          <Card title="Rabatte & Versand">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Versandkosten CHF">
+                <Input
+                  type="number"
+                  step="0.05"
+                  className="no-spin"
+                  value={state.shipping}
+                  onChange={(e) => patch({ shipping: Number(e.target.value) || 0 })}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              {state.discounts.map((d) => (
+                <div key={d.id} className="rounded-lg border border-slate-100 p-3">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_130px_90px_28px]">
+                    <input
+                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      placeholder="Bezeichnung (z.B. Sommeraktion)"
+                      value={d.label}
+                      onChange={(e) => updateDiscount(d.id, { label: e.target.value })}
+                    />
+                    <select
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      value={d.kind}
+                      onChange={(e) =>
+                        updateDiscount(d.id, {
+                          kind: e.target.value as DocumentDiscount['kind'],
+                        })
+                      }
+                    >
+                      <option value="percent">Prozent %</option>
+                      <option value="amount">Fester Betrag CHF</option>
+                      <option value="freeShipping">Gratis Versand</option>
+                    </select>
+                    {d.kind !== 'freeShipping' ? (
+                      <input
+                        type="number"
+                        step={d.kind === 'percent' ? '1' : '0.05'}
+                        className="no-spin rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        value={d.value}
+                        onChange={(e) => updateDiscount(d.id, { value: Number(e.target.value) || 0 })}
+                      />
+                    ) : (
+                      <span />
+                    )}
+                    <button
+                      type="button"
+                      className="flex items-center justify-center text-slate-400 hover:text-red-600"
+                      onClick={() =>
+                        patch({ discounts: state.discounts.filter((x) => x.id !== d.id) })
+                      }
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  {d.kind === 'percent' && (
+                    <div className="mt-2 space-y-1 text-xs">
+                      <label className="flex items-center gap-2 text-slate-600">
+                        <input
+                          type="radio"
+                          checked={d.scope === 'total'}
+                          onChange={() => updateDiscount(d.id, { scope: 'total', lineItemIds: [] })}
+                        />
+                        Auf die ganze Rechnung
+                      </label>
+                      <label className="flex items-center gap-2 text-slate-600">
+                        <input
+                          type="radio"
+                          checked={d.scope === 'lines'}
+                          onChange={() => updateDiscount(d.id, { scope: 'lines' })}
+                        />
+                        Nur auf bestimmte Positionen
+                      </label>
+                      {d.scope === 'lines' && (
+                        <div className="ml-5 flex flex-wrap gap-2 pt-1">
+                          {state.lineItems.map((it, i) => (
+                            <label
+                              key={it.id}
+                              className="flex items-center gap-1 rounded border border-slate-200 px-2 py-0.5"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={d.lineItemIds?.includes(it.id) ?? false}
+                                onChange={(e) => {
+                                  const set = new Set(d.lineItemIds ?? [])
+                                  if (e.target.checked) set.add(it.id)
+                                  else set.delete(it.id)
+                                  updateDiscount(d.id, { lineItemIds: [...set] })
+                                }}
+                              />
+                              Pos {i + 1}
+                              {it.description ? ` – ${it.description.slice(0, 20)}` : ''}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => patch({ discounts: [...state.discounts, newDiscount()] })}
+            >
+              <Plus className="size-4" /> Rabatt
+            </Button>
+          </Card>
+
           <Card title="Texte">
             <div className="space-y-3">
               <Field label="Einleitungstext">
@@ -592,15 +755,26 @@ export function DocumentEditorPage() {
                 <span className="text-slate-500">Zwischensumme</span>
                 <span>{formatCHF(totals.subtotal)}</span>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Rabatt gesamt %</span>
-                <input
-                  type="number"
-                  className="no-spin w-16 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-                  value={state.globalDiscountPct}
-                  onChange={(e) => patch({ globalDiscountPct: Number(e.target.value) })}
-                />
-              </div>
+              {totals.discountLines
+                .filter((l) => !l.isShipping)
+                .map((l, i) => (
+                  <div key={i} className="flex justify-between text-slate-500">
+                    <span>{l.label}</span>
+                    <span>−{formatCHF(l.amount)}</span>
+                  </div>
+                ))}
+              {totals.shipping > 0 && (
+                <div className="flex justify-between text-slate-500">
+                  <span>Versand</span>
+                  <span>{formatCHF(totals.shipping)}</span>
+                </div>
+              )}
+              {totals.freeShipping && totals.shipping > 0 && (
+                <div className="flex justify-between text-slate-500">
+                  <span>Gratis Versand</span>
+                  <span>−{formatCHF(totals.shipping)}</span>
+                </div>
+              )}
               {Math.abs(totals.roundingDelta) >= 0.01 && (
                 <div className="flex justify-between text-slate-500">
                   <span>Rundung</span>

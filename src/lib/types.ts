@@ -116,6 +116,19 @@ export interface LineItem {
   discountPct: number
 }
 
+export type DocumentDiscountKind = 'percent' | 'amount' | 'freeShipping'
+
+export interface DocumentDiscount {
+  id: string
+  label: string
+  kind: DocumentDiscountKind
+  /** percent (0–100) for 'percent', CHF for 'amount', ignored for 'freeShipping'. */
+  value: number
+  /** 'total' → whole document; 'lines' → only the referenced positions. */
+  scope: 'total' | 'lines'
+  lineItemIds?: string[]
+}
+
 export interface Payment {
   id: string
   date: IsoDate
@@ -148,8 +161,12 @@ export interface BusinessDocument {
   fiscalYear: number
   currency: 'CHF'
   lineItems: LineItem[]
-  /** Global discount in percent applied after line discounts. */
+  /** @deprecated use `discounts`. Global discount in percent. Still honoured. */
   globalDiscountPct: number
+  /** Rabatte: %, fester Betrag, gratis Versand – auf die ganze Rechnung oder auf Positionen. */
+  discounts?: DocumentDiscount[]
+  /** Versandkosten in CHF (0 = kein Versand ausgewiesen). */
+  shipping?: number
   subtotal: number
   discountTotal: number
   /** Rounded to 0.05 for invoices. */

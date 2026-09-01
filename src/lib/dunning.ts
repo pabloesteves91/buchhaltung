@@ -71,6 +71,8 @@ export function dunningDocument(
     id: `${invoice.id}-mahnung${level}`,
     lineItems,
     globalDiscountPct: 0,
+    discounts: [],
+    shipping: 0,
     subtotal: round2(open + fee),
     discountTotal: 0,
     total,

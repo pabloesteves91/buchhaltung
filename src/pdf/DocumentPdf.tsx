@@ -8,7 +8,7 @@ import {
 } from '@react-pdf/renderer'
 import type { BusinessDocument, CompanySettings } from '@/lib/types'
 import { DOCUMENT_TYPE_LABEL } from '@/hooks/useDocuments'
-import { lineNet } from '@/lib/documentTotals'
+import { computeTotals, lineNet } from '@/lib/documentTotals'
 import { formatAmount, formatDate } from '@/lib/format'
 
 // Only the 14 standard PDF fonts are used (Helvetica) so the output is byte-stable
@@ -125,6 +125,19 @@ export function DocumentPdf({
   const withQr = Boolean(qrBillPng)
   const heading = headingOverride ?? (receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type])
   const paid = d.status === 'bezahlt'
+
+  // Recompute the discount/shipping breakdown for display; `d.total` stays authoritative.
+  const hasBreakdown =
+    (d.discounts?.length ?? 0) > 0 || (d.shipping ?? 0) > 0 || d.globalDiscountPct > 0
+  const bt = hasBreakdown
+    ? computeTotals({
+        lineItems: d.lineItems,
+        type: d.type,
+        globalDiscountPct: d.globalDiscountPct,
+        discounts: d.discounts,
+        shipping: d.shipping,
+      })
+    : null
   return (
     <Document
       title={`${heading} ${d.number}`}
@@ -207,7 +220,34 @@ export function DocumentPdf({
         </View>
 
         <View style={styles.totals}>
-          {d.discountTotal > 0 && (
+          {bt ? (
+            <>
+              <View style={styles.totalLine}>
+                <Text>Zwischensumme</Text>
+                <Text>{formatAmount(bt.subtotal)}</Text>
+              </View>
+              {bt.discountLines
+                .filter((l) => !l.isShipping)
+                .map((l, i) => (
+                  <View key={i} style={styles.totalLine}>
+                    <Text>{l.label}</Text>
+                    <Text>−{formatAmount(l.amount)}</Text>
+                  </View>
+                ))}
+              {bt.shipping > 0 && (
+                <View style={styles.totalLine}>
+                  <Text>Versand</Text>
+                  <Text>{formatAmount(bt.shipping)}</Text>
+                </View>
+              )}
+              {bt.freeShipping && bt.shipping > 0 && (
+                <View style={styles.totalLine}>
+                  <Text>Gratis Versand</Text>
+                  <Text>−{formatAmount(bt.shipping)}</Text>
+                </View>
+              )}
+            </>
+          ) : d.discountTotal > 0 ? (
             <>
               <View style={styles.totalLine}>
                 <Text>Zwischensumme</Text>
@@ -218,7 +258,7 @@ export function DocumentPdf({
                 <Text>−{formatAmount(d.discountTotal)}</Text>
               </View>
             </>
-          )}
+          ) : null}
           {Math.abs(d.roundingDelta) >= 0.01 && (
             <View style={styles.totalLine}>
               <Text>Rundung</Text>
