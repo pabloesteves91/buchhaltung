@@ -131,6 +131,7 @@ async function shopifyFetch(
   cfg: ShopifyConfig,
   path: string,
   init: RequestInit = {},
+  retriedWithFreshToken = false,
 ): Promise<Response> {
   const token = await getAccessToken(cfg)
   const url = `https://${cfg.shopDomain}/admin/api/${cfg.apiVersion}${path}`
@@ -144,6 +145,19 @@ async function shopifyFetch(
   })
   if (!res.ok) {
     const text = await res.text()
+    // A stale cached token (e.g. after re-authorising with a new scope) — drop it
+    // and retry once with a freshly granted token.
+    if ((res.status === 401 || res.status === 403) && !retriedWithFreshToken) {
+      await db()
+        .doc('settings/shopify')
+        .set(
+          { accessToken: FieldValue.delete(), accessTokenExpiresAt: FieldValue.delete() },
+          { merge: true },
+        )
+      cfg.accessToken = undefined
+      cfg.accessTokenExpiresAt = undefined
+      return shopifyFetch(cfg, path, init, true)
+    }
     throw new HttpsError('internal', `Shopify ${res.status}: ${text.slice(0, 300)}`)
   }
   return res
