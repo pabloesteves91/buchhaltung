@@ -14,6 +14,8 @@
  */
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
+
+const REGION = 'europe-west6'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 // Lazy — initializeApp() runs in index.ts before any handler fires.
@@ -334,7 +336,7 @@ async function storeOrder(o: ShopifyOrder, cfg: ShopifyConfig): Promise<void> {
 
 /* ------------------------------- callables -------------------------------- */
 
-export const testShopifyConnection = onCall(async (req) => {
+export const testShopifyConnection = onCall({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const cfg = await getConfig()
   const res = await shopifyFetch(cfg, '/shop.json')
@@ -342,7 +344,7 @@ export const testShopifyConnection = onCall(async (req) => {
   return { name: shop.name, domain: shop.myshopify_domain, currency: shop.currency }
 })
 
-export const importShopifyOrders = onCall<{ sinceDays?: number }>(async (req) => {
+export const importShopifyOrders = onCall<{ sinceDays?: number }>({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const cfg = await getConfig()
   const sinceDays = Math.min(Math.max(req.data?.sinceDays ?? 90, 1), 730)
@@ -367,14 +369,14 @@ export const importShopifyOrders = onCall<{ sinceDays?: number }>(async (req) =>
   return { imported }
 })
 
-export const bookShopifyOrder = onCall<{ orderId: string | string[] }>(async (req) => {
+export const bookShopifyOrder = onCall<{ orderId: string | string[] }>({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const ids = Array.isArray(req.data.orderId) ? req.data.orderId : [req.data.orderId]
   for (const id of ids) await bookOrderDoc(id)
   return { booked: ids.length }
 })
 
-export const unbookShopifyOrder = onCall<{ orderId: string }>(async (req) => {
+export const unbookShopifyOrder = onCall<{ orderId: string }>({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const ref = db().doc(`shopifyOrders/${req.data.orderId}`)
   const snap = await ref.get()
@@ -388,7 +390,7 @@ export const unbookShopifyOrder = onCall<{ orderId: string }>(async (req) => {
   return { ok: true }
 })
 
-export const registerShopifyWebhooks = onCall(async (req) => {
+export const registerShopifyWebhooks = onCall({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const cfg = await getConfig()
   const project = process.env.GCLOUD_PROJECT
@@ -414,7 +416,7 @@ export const registerShopifyWebhooks = onCall(async (req) => {
 
 /* -------------------------------- webhook -------------------------------- */
 
-export const shopifyWebhook = onRequest({ cors: false }, async (req, res) => {
+export const shopifyWebhook = onRequest({ cors: false, region: REGION }, async (req, res) => {
   const cfg = await getConfig().catch(() => null)
   const secret = cfg?.apiSecretKey
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256') ?? ''
