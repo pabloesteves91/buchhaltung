@@ -5,16 +5,20 @@ import { PageHeader } from '@/components/PageHeader'
 import { Badge, Button, Card, EmptyState, TableWrap } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { DOCUMENT_TYPE_LABEL, useDocuments } from '@/hooks/useDocuments'
+import { useShopifyOrders, type ShopifyBookingStatus } from '@/hooks/useShopify'
 import { amountPaid } from '@/lib/documentTotals'
 import { formatCHF, formatDate } from '@/lib/format'
 import type { BusinessDocument, DocumentStatus, DocumentType } from '@/lib/types'
 
-const TABS: { key: DocumentType | 'all'; label: string }[] = [
+type Tab = DocumentType | 'all' | 'shopify'
+
+const TABS: { key: Tab; label: string }[] = [
   { key: 'all', label: 'Alle' },
   { key: 'offerte', label: 'Offerten' },
   { key: 'rechnung', label: 'Rechnungen' },
   { key: 'gutschrift', label: 'Gutschriften' },
   { key: 'lieferschein', label: 'Lieferscheine' },
+  { key: 'shopify', label: 'Shopify-Bestellungen' },
 ]
 
 const STATUS: Record<DocumentStatus, { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }> = {
@@ -26,10 +30,21 @@ const STATUS: Record<DocumentStatus, { label: string; tone: 'slate' | 'green' | 
   storniert: { label: 'Storniert', tone: 'slate' },
 }
 
+const ORDER_STATUS: Record<ShopifyBookingStatus, { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }> = {
+  open: { label: 'Nicht verbucht', tone: 'amber' },
+  booked: { label: 'Verbucht', tone: 'green' },
+  cancelled: { label: 'Storniert', tone: 'slate' },
+  refunded: { label: 'Retoure verbucht', tone: 'blue' },
+  refund_pending: { label: 'Retoure offen', tone: 'red' },
+}
+
 export function DocumentsPage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<DocumentType | 'all'>('all')
-  const { data: docs, isLoading } = useDocuments(tab === 'all' ? undefined : tab)
+  const [tab, setTab] = useState<Tab>('all')
+  const { data: docs, isLoading } = useDocuments(
+    tab === 'all' || tab === 'shopify' ? undefined : tab,
+  )
+  const { data: orders } = useShopifyOrders()
 
   const openInvoiceTotal = useMemo(() => {
     return (docs ?? [])
@@ -41,7 +56,7 @@ export function DocumentsPage() {
     <>
       <PageHeader
         title="Offerten & Rechnungen"
-        subtitle="Dokumente erstellen, als PDF exportieren oder per E-Mail senden."
+        subtitle="Dokumente und Shopify-Bestellungen an einem Ort."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => navigate('/dokumente/neu?typ=offerte')}>
@@ -72,11 +87,71 @@ export function DocumentsPage() {
             )}
           >
             {t.label}
+            {t.key === 'shopify' && (orders?.length ?? 0) > 0 && (
+              <span className="ml-1.5 text-xs opacity-70">({orders?.length})</span>
+            )}
           </button>
         ))}
       </div>
 
-      {isLoading ? (
+      {tab === 'shopify' ? (
+        (orders?.length ?? 0) === 0 ? (
+          <EmptyState
+            title="Keine Shopify-Bestellungen"
+            description="Verbinde Shopify und importiere die Bestellungen."
+            action={<Button onClick={() => navigate('/shopify')}>Zu Shopify</Button>}
+          />
+        ) : (
+          <Card>
+            <TableWrap>
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                    <th className="py-2">Bestellung</th>
+                    <th className="py-2">Kunde</th>
+                    <th className="py-2">Datum</th>
+                    <th className="py-2">Zahlung</th>
+                    <th className="py-2 text-right">Total</th>
+                    <th className="py-2 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(orders ?? []).map((o) => (
+                    <tr
+                      key={o.id}
+                      className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                      onClick={() => navigate('/shopify')}
+                    >
+                      <td className="py-2 font-medium text-slate-700">{o.orderName}</td>
+                      <td className="py-2 text-slate-600">
+                        {o.contactId ? (
+                          <Link
+                            to={`/kunden/${o.contactId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline"
+                          >
+                            {o.customerName}
+                          </Link>
+                        ) : (
+                          o.customerName
+                        )}
+                      </td>
+                      <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(o.date)}</td>
+                      <td className="py-2 text-slate-500">{o.financialStatus}</td>
+                      <td className="py-2 text-right font-medium">{formatCHF(o.total)}</td>
+                      <td className="py-2 text-right">
+                        <Badge tone={ORDER_STATUS[o.bookingStatus].tone}>
+                          {ORDER_STATUS[o.bookingStatus].label}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableWrap>
+          </Card>
+        )
+      ) : isLoading ? (
         <p className="text-sm text-slate-400">Laden …</p>
       ) : (docs?.length ?? 0) === 0 ? (
         <EmptyState

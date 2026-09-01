@@ -28,6 +28,7 @@ export interface ShopifyOrderDoc {
   goods: number
   customerName: string
   customerEmail: string | null
+  shopifyCustomerId?: string | null
   contactId: string | null
   bookingStatus: ShopifyBookingStatus
   bookedTransactionIds?: string[]

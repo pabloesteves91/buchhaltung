@@ -10,6 +10,9 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ 
 const JournalPage = lazy(() => import('@/pages/JournalPage').then((m) => ({ default: m.JournalPage })))
 const AccountsPage = lazy(() => import('@/pages/AccountsPage').then((m) => ({ default: m.AccountsPage })))
 const ContactsPage = lazy(() => import('@/pages/ContactsPage').then((m) => ({ default: m.ContactsPage })))
+const ContactDetailPage = lazy(() =>
+  import('@/pages/ContactDetailPage').then((m) => ({ default: m.ContactDetailPage })),
+)
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage })))
 const DocumentEditorPage = lazy(() =>
   import('@/pages/DocumentEditorPage').then((m) => ({ default: m.DocumentEditorPage })),
@@ -53,6 +56,7 @@ export default function App() {
                 <Route path="journal" element={<JournalPage />} />
                 <Route path="konten" element={<AccountsPage />} />
                 <Route path="kunden" element={<ContactsPage />} />
+              <Route path="kunden/:id" element={<ContactDetailPage />} />
                 <Route path="dokumente" element={<DocumentsPage />} />
                 <Route path="dokumente/neu" element={<DocumentEditorPage />} />
                 <Route path="dokumente/:id" element={<DocumentEditorPage />} />
