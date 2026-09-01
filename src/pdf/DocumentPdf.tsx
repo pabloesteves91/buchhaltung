@@ -67,6 +67,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   outro: { marginTop: 20 },
+  qrPage: { position: 'relative' },
+  qrHint: {
+    position: 'absolute',
+    top: 24,
+    left: 24,
+    right: 24,
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: '#55606e',
+  },
+  qrImage: { position: 'absolute', bottom: 0, left: 0, width: 595.28, height: 297.64 },
   footer: {
     position: 'absolute',
     bottom: 32,
@@ -96,9 +107,11 @@ function companyAddressLines(s: CompanySettings): string[] {
 export function DocumentPdf({
   document: d,
   settings,
+  qrBillPng,
 }: {
   document: BusinessDocument
   settings: CompanySettings
+  qrBillPng?: string | null
 }) {
   const isInvoice = d.type === 'rechnung'
   return (
@@ -110,8 +123,8 @@ export function DocumentPdf({
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
-          {settings.logoDataUrl || settings.logoUrl ? (
-            <Image src={(settings.logoDataUrl || settings.logoUrl) as string} style={styles.logo} />
+          {settings.logoDataUrl ? (
+            <Image src={settings.logoDataUrl} style={styles.logo} />
           ) : (
             <Text style={styles.companyName}>{settings.name}</Text>
           )}
@@ -216,6 +229,16 @@ export function DocumentPdf({
           {settings.invoice.footerText}
         </Text>
       </Page>
+
+      {qrBillPng ? (
+        <Page size="A4" style={styles.qrPage}>
+          <Text style={styles.qrHint}>
+            {DOCUMENT_TYPE_LABEL[d.type]} {d.number} · Betrag CHF {formatAmount(d.total)}
+            {d.dueDate ? ` · zahlbar bis ${formatDate(d.dueDate)}` : ''}
+          </Text>
+          <Image src={qrBillPng} style={styles.qrImage} />
+        </Page>
+      ) : null}
     </Document>
   )
 }

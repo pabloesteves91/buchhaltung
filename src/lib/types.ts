@@ -133,7 +133,13 @@ export interface BusinessDocument {
   /** Denormalized snapshot of the recipient at creation time (so old PDFs never change). */
   recipientSnapshot: {
     name: string
+    /** Formatted lines for display on the PDF. */
     address: string[]
+    /** Structured address for the QR-bill debtor block. */
+    street?: string
+    zip?: string
+    city?: string
+    country?: string
     email?: string
     language: ContactLanguage
   }

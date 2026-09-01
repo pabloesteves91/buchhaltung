@@ -4,6 +4,7 @@ import { functions } from '@/lib/firebase'
 import { uploadFile } from '@/lib/storage'
 import { DOCUMENT_TYPE_LABEL } from '@/hooks/useDocuments'
 import { DocumentPdf } from './DocumentPdf'
+import { buildQrBillPng } from './qrBill'
 import type { BusinessDocument, CompanySettings } from '@/lib/types'
 
 function fileName(d: BusinessDocument): string {
@@ -14,7 +15,8 @@ export async function buildPdfBlob(
   d: BusinessDocument,
   settings: CompanySettings,
 ): Promise<Blob> {
-  return pdf(<DocumentPdf document={d} settings={settings} />).toBlob()
+  const qrBillPng = d.type === 'rechnung' ? await buildQrBillPng(d, settings) : null
+  return pdf(<DocumentPdf document={d} settings={settings} qrBillPng={qrBillPng} />).toBlob()
 }
 
 export async function downloadDocumentPdf(d: BusinessDocument, settings: CompanySettings) {

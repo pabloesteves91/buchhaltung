@@ -14,16 +14,20 @@ import {
   useDocument,
   useUpdateDocument,
 } from '@/hooks/useDocuments'
-import { computeTotals, newLineItem } from '@/lib/documentTotals'
+import { useAccounts } from '@/hooks/useAccounts'
+import { useCreateTransaction } from '@/hooks/useTransactions'
+import { amountPaid, computeTotals, newLineItem, openAmount } from '@/lib/documentTotals'
 import { DocumentPdf } from '@/pdf/DocumentPdf'
+import { buildQrBillPng } from '@/pdf/qrBill'
 import { downloadDocumentPdf, emailDocument } from '@/pdf/pdfActions'
-import { fiscalYearOf, formatCHF, todayIso } from '@/lib/format'
+import { fiscalYearOf, formatCHF, round2, todayIso } from '@/lib/format'
 import type {
   BusinessDocument,
   Contact,
   DocumentStatus,
   DocumentType,
   LineItem,
+  Payment,
 } from '@/lib/types'
 
 function addDays(iso: string, days: number): string {
@@ -41,6 +45,10 @@ function recipientFromContact(c: Contact): BusinessDocument['recipientSnapshot']
       `${c.address.zip ?? ''} ${c.address.city ?? ''}`.trim(),
       c.address.country && c.address.country !== 'CH' ? c.address.country : '',
     ].filter(Boolean) as string[],
+    street: c.address.line1,
+    zip: c.address.zip,
+    city: c.address.city,
+    country: c.address.country || 'CH',
     email: c.email,
     language: c.language,
   }
@@ -77,18 +85,30 @@ export function DocumentEditorPage() {
 
   const { data: settings } = useSettings()
   const { data: contacts } = useContacts()
+  const { data: accounts } = useAccounts()
   const { data: existing, isLoading } = useDocument(id)
   const createDoc = useCreateDocument()
   const updateDoc = useUpdateDocument()
   const deleteDoc = useDeleteDocument()
+  const createTx = useCreateTransaction()
 
   const [state, setState] = useState<EditorState | null>(null)
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [qrPng, setQrPng] = useState<string | null>(null)
   const [showEmail, setShowEmail] = useState(false)
   const [emailForm, setEmailForm] = useState({ to: '', subject: '', body: '' })
   const [emailBusy, setEmailBusy] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showPay, setShowPay] = useState(false)
+  const [payForm, setPayForm] = useState({
+    date: todayIso(),
+    amount: '',
+    method: 'Bank',
+    book: true,
+    revenueAccountId: '',
+    paymentAccountId: '',
+  })
 
   // Initialise editor state once (new) or from the loaded document (edit).
   useEffect(() => {
@@ -258,6 +278,89 @@ export function DocumentEditorPage() {
     } finally {
       setEmailBusy(false)
     }
+  }
+
+  const paid = existing ? amountPaid(existing) : 0
+  const open = existing ? openAmount(existing) : totals.total
+  const revenueAccounts = (accounts ?? []).filter((a) => a.type === 'ertrag' && a.active)
+  const moneyAccounts = (accounts ?? []).filter((a) => a.type === 'aktiven' && a.active)
+
+  function openPay() {
+    setPayForm({
+      date: todayIso(),
+      amount: String(open > 0 ? open : totals.total),
+      method: 'Bank',
+      book: true,
+      revenueAccountId:
+        revenueAccounts.find((a) => a.number === '3200')?.id ?? revenueAccounts[0]?.id ?? '',
+      paymentAccountId:
+        moneyAccounts.find((a) => a.number === '1020')?.id ?? moneyAccounts[0]?.id ?? '',
+    })
+    setShowPay(true)
+  }
+
+  async function addPayment() {
+    if (!existing) return
+    const amount = round2(Number(payForm.amount))
+    if (!amount || amount <= 0) return
+    let transactionId: string | undefined
+    if (payForm.book && payForm.revenueAccountId && payForm.paymentAccountId) {
+      transactionId = await createTx.mutateAsync({
+        date: payForm.date,
+        fiscalYear: fiscalYearOf(payForm.date),
+        description: `${DOCUMENT_TYPE_LABEL[existing.type]} ${existing.number} – ${existing.recipientSnapshot.name}`,
+        amount,
+        kind: existing.type === 'gutschrift' ? 'ausgabe' : 'einnahme',
+        categoryAccountId: payForm.revenueAccountId,
+        paymentAccountId: payForm.paymentAccountId,
+        attachments: [],
+        tags: [],
+        source: 'manual',
+        linkedDocumentId: existing.id,
+        reconciled: true,
+        locked: false,
+      })
+    }
+    const payment: Payment = {
+      id: crypto.randomUUID(),
+      date: payForm.date,
+      amount,
+      method: payForm.method,
+      transactionId,
+    }
+    const payments = [...existing.payments, payment]
+    const newPaid = round2(payments.reduce((s, p) => s + p.amount, 0))
+    const status: DocumentStatus = newPaid >= existing.total ? 'bezahlt' : 'teilbezahlt'
+    await updateDoc.mutateAsync({ id: existing.id, payments, status })
+    patch({ status })
+    setShowPay(false)
+  }
+
+  async function convertToInvoice() {
+    if (!existing) return
+    const number = await nextDocumentNumber(
+      'rechnung',
+      fiscalYearOf(todayIso()),
+      settings!.invoice.numberPrefix.rechnung,
+    )
+    const t = computeTotals(existing.lineItems, existing.globalDiscountPct, 'rechnung')
+    const newId = await createDoc.mutateAsync({
+      ...existing,
+      type: 'rechnung',
+      number,
+      date: todayIso(),
+      dueDate: addDays(todayIso(), settings!.invoice.defaultPaymentTermDays),
+      fiscalYear: fiscalYearOf(todayIso()),
+      ...t,
+      status: 'entwurf',
+      payments: [],
+      dunningLevel: 0,
+      linkedFromId: existing.id,
+      sentAt: undefined,
+      sentTo: undefined,
+      pdfStoragePath: undefined,
+    } as Omit<BusinessDocument, 'id' | 'createdAt' | 'updatedAt'>)
+    navigate(`/dokumente/${newId}`)
   }
 
   const title = isNew
@@ -488,7 +591,14 @@ export function DocumentEditorPage() {
           <Button
             variant="secondary"
             className="w-full"
-            onClick={() => setShowPreview(true)}
+            onClick={async () => {
+              setShowPreview(true)
+              if (previewDoc && previewDoc.type === 'rechnung') {
+                setQrPng(await buildQrBillPng(previewDoc, settings))
+              } else {
+                setQrPng(null)
+              }
+            }}
             disabled={!state.contactId}
           >
             PDF-Vorschau
@@ -498,6 +608,46 @@ export function DocumentEditorPage() {
               Nummer und Versand sind nach dem ersten Speichern verfügbar.
             </p>
           )}
+
+          {!isNew && existing && (state.type === 'offerte' || state.type === 'auftragsbestaetigung') && (
+            <Button variant="secondary" className="w-full" onClick={convertToInvoice}>
+              In Rechnung umwandeln
+            </Button>
+          )}
+
+          {!isNew && existing && (state.type === 'rechnung' || state.type === 'gutschrift') && (
+            <Card title="Zahlungen">
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Bezahlt</span>
+                  <span>{formatCHF(paid)}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Offen</span>
+                  <span>{formatCHF(open)}</span>
+                </div>
+              </div>
+              {existing.payments.length > 0 && (
+                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                  {existing.payments.map((p) => (
+                    <li key={p.id} className="flex justify-between">
+                      <span>
+                        {p.date} · {p.method}
+                        {p.transactionId ? ' · verbucht' : ''}
+                      </span>
+                      <span>{formatCHF(p.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {open > 0 && (
+                <Button size="sm" className="mt-3 w-full" onClick={openPay}>
+                  Zahlung erfassen
+                </Button>
+              )}
+            </Card>
+          )}
+
           {!isNew && (
             <Button
               variant="ghost"
@@ -519,13 +669,84 @@ export function DocumentEditorPage() {
         {previewDoc && (
           <div className="h-[70vh]">
             <PDFViewer width="100%" height="100%" showToolbar>
-              <DocumentPdf document={previewDoc} settings={settings} />
+              <DocumentPdf document={previewDoc} settings={settings} qrBillPng={qrPng} />
             </PDFViewer>
           </div>
         )}
         <p className="mt-2 text-xs text-slate-400">
           Diese Vorschau ist identisch mit dem heruntergeladenen und dem per E-Mail versendeten PDF.
         </p>
+      </Modal>
+
+      <Modal open={showPay} onClose={() => setShowPay(false)} title="Zahlung erfassen">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Datum">
+              <Input
+                type="date"
+                value={payForm.date}
+                onChange={(e) => setPayForm({ ...payForm, date: e.target.value })}
+              />
+            </Field>
+            <Field label="Betrag CHF">
+              <Input
+                type="number"
+                step="0.05"
+                className="no-spin"
+                value={payForm.amount}
+                onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="Zahlungsart">
+            <Input
+              value={payForm.method}
+              onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={payForm.book}
+              onChange={(e) => setPayForm({ ...payForm, book: e.target.checked })}
+            />
+            Als Buchung im Journal erfassen
+          </label>
+          {payForm.book && (
+            <div className="grid grid-cols-1 gap-3">
+              <Field label={existing?.type === 'gutschrift' ? 'Aufwandskonto' : 'Ertragskonto'}>
+                <Select
+                  value={payForm.revenueAccountId}
+                  onChange={(e) => setPayForm({ ...payForm, revenueAccountId: e.target.value })}
+                >
+                  {revenueAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.number} {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Geldkonto">
+                <Select
+                  value={payForm.paymentAccountId}
+                  onChange={(e) => setPayForm({ ...payForm, paymentAccountId: e.target.value })}
+                >
+                  {moneyAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.number} {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button onClick={addPayment}>Speichern</Button>
+            <Button variant="ghost" onClick={() => setShowPay(false)}>
+              Abbrechen
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={showEmail} onClose={() => setShowEmail(false)} title="Per E-Mail senden">
