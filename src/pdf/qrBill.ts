@@ -73,18 +73,14 @@ export async function buildQrBillPng(
     return null
   }
 
-  // The payment part is 210 × 105 mm. Rasterise at ~8× for crisp print output.
-  const scale = 8
-  const wmm = 210
-  const hmm = 105
-  const w = Math.round((wmm / 25.4) * 96 * (scale / 3))
-  const h = Math.round((hmm / 25.4) * 96 * (scale / 3))
+  // swissqrbill emits width="210mm" height="105mm" (its natural size ≈ 794 × 397 px
+  // at 96 dpi). We rasterise it 3× larger so the QR stays crisp at print size; the
+  // browser re-renders the vector SVG at the target size, keeping proportions.
+  const scale = 3
+  const w = Math.round((210 / 25.4) * 96 * scale)
+  const h = Math.round((105 / 25.4) * 96 * scale)
 
-  const sized = svg
-    .replace(/width="[^"]*"/, `width="${w}"`)
-    .replace(/height="[^"]*"/, `height="${h}"`)
-
-  const blob = new Blob([sized], { type: 'image/svg+xml;charset=utf-8' })
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   try {
     const img = await loadImage(url)

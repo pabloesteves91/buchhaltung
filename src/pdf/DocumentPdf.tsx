@@ -23,6 +23,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     lineHeight: 1.4,
   },
+  pageWithQr: { paddingBottom: 320 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   logo: { maxWidth: 150, maxHeight: 56, objectFit: 'contain' },
   companyBlock: { textAlign: 'right', fontSize: 8, color: '#55606e' },
@@ -67,20 +68,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   outro: { marginTop: 20 },
-  qrPage: { position: 'relative' },
-  qrHint: {
-    position: 'absolute',
-    top: 24,
-    left: 24,
-    right: 24,
-    fontFamily: 'Helvetica',
-    fontSize: 9,
-    color: '#55606e',
-  },
-  qrImage: { position: 'absolute', bottom: 0, left: 0, width: 595.28, height: 297.64 },
+  // The Swiss QR payment part is a regulated 210 × 105 mm block anchored to the
+  // very bottom of the (last) page. 105 mm = 297.64 pt, 210 mm = 595.28 pt.
+  qrZone: { position: 'absolute', bottom: 0, left: 0, width: 595.28, height: 297.64 },
+  qrImage: { width: 595.28, height: 297.64 },
   footer: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 306,
+    left: 48,
+    right: 48,
+    paddingTop: 6,
+    fontSize: 7.5,
+    color: '#8a94a1',
+    textAlign: 'center',
+  },
+  footerNoQr: {
+    position: 'absolute',
+    bottom: 28,
     left: 48,
     right: 48,
     borderTopWidth: 0.5,
@@ -114,6 +118,7 @@ export function DocumentPdf({
   qrBillPng?: string | null
 }) {
   const isInvoice = d.type === 'rechnung'
+  const withQr = Boolean(qrBillPng)
   return (
     <Document
       title={`${DOCUMENT_TYPE_LABEL[d.type]} ${d.number}`}
@@ -121,7 +126,7 @@ export function DocumentPdf({
       creator="nipponnites Buchhaltung"
       producer="nipponnites Buchhaltung"
     >
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={withQr ? [styles.page, styles.pageWithQr] : styles.page}>
         <View style={styles.headerRow}>
           {settings.logoDataUrl ? (
             <Image src={settings.logoDataUrl} style={styles.logo} />
@@ -225,20 +230,28 @@ export function DocumentPdf({
 
         {d.outroText ? <Text style={styles.outro}>{d.outroText}</Text> : null}
 
-        <Text style={styles.footer} fixed>
-          {settings.invoice.footerText}
-        </Text>
-      </Page>
-
-      {qrBillPng ? (
-        <Page size="A4" style={styles.qrPage}>
-          <Text style={styles.qrHint}>
-            {DOCUMENT_TYPE_LABEL[d.type]} {d.number} · Betrag CHF {formatAmount(d.total)}
-            {d.dueDate ? ` · zahlbar bis ${formatDate(d.dueDate)}` : ''}
+        {settings.invoice.footerText ? (
+          <Text style={withQr ? styles.footer : styles.footerNoQr} fixed>
+            {settings.invoice.footerText}
           </Text>
-          <Image src={qrBillPng} style={styles.qrImage} />
-        </Page>
-      ) : null}
+        ) : null}
+
+        {qrBillPng ? (
+          <View
+            fixed
+            style={styles.qrZone}
+            render={(props) => {
+              const { pageNumber, totalPages } = props as unknown as {
+                pageNumber: number
+                totalPages: number
+              }
+              return pageNumber === totalPages ? (
+                <Image src={qrBillPng} style={styles.qrImage} />
+              ) : null
+            }}
+          />
+        ) : null}
+      </Page>
     </Document>
   )
 }

@@ -667,7 +667,7 @@ export function DocumentEditorPage() {
 
       <Modal open={showPreview} onClose={() => setShowPreview(false)} title="PDF-Vorschau" wide>
         {previewDoc && (
-          <div className="h-[70vh]">
+          <div className="h-[82vh]">
             <PDFViewer width="100%" height="100%" showToolbar>
               <DocumentPdf document={previewDoc} settings={settings} qrBillPng={qrPng} />
             </PDFViewer>
