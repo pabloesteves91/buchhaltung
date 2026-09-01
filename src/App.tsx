@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/AppShell'
@@ -6,24 +6,41 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 import { queryClient } from '@/lib/queryClient'
 import { LoginPage } from '@/pages/LoginPage'
 
-const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
-const JournalPage = lazy(() => import('@/pages/JournalPage').then((m) => ({ default: m.JournalPage })))
-const AccountsPage = lazy(() => import('@/pages/AccountsPage').then((m) => ({ default: m.AccountsPage })))
-const ContactsPage = lazy(() => import('@/pages/ContactsPage').then((m) => ({ default: m.ContactsPage })))
-const ContactDetailPage = lazy(() =>
-  import('@/pages/ContactDetailPage').then((m) => ({ default: m.ContactDetailPage })),
-)
-const DocumentsPage = lazy(() => import('@/pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage })))
-const DocumentEditorPage = lazy(() =>
-  import('@/pages/DocumentEditorPage').then((m) => ({ default: m.DocumentEditorPage })),
-)
-const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
-const ShopifyPage = lazy(() => import('@/pages/ShopifyPage').then((m) => ({ default: m.ShopifyPage })))
-const ShopifyOrderPage = lazy(() =>
-  import('@/pages/ShopifyOrderPage').then((m) => ({ default: m.ShopifyOrderPage })),
-)
-const ReportsPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.ReportsPage })))
-const NotesPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.NotesPage })))
+/**
+ * lazy() import that self-heals after a deploy: if the old chunk hash is gone
+ * (stale index.html still cached), reload the page once to pick up the new build.
+ */
+function lazyPage<T extends Record<string, ComponentType<object>>>(
+  factory: () => Promise<T>,
+  name: keyof T,
+) {
+  return lazy(() =>
+    factory()
+      .then((m) => ({ default: m[name] }))
+      .catch((err) => {
+        const KEY = 'chunk-reload-at'
+        const last = Number(sessionStorage.getItem(KEY) ?? 0)
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem(KEY, String(Date.now()))
+          window.location.reload()
+        }
+        throw err
+      }),
+  )
+}
+
+const DashboardPage = lazyPage(() => import('@/pages/DashboardPage'), 'DashboardPage')
+const JournalPage = lazyPage(() => import('@/pages/JournalPage'), 'JournalPage')
+const AccountsPage = lazyPage(() => import('@/pages/AccountsPage'), 'AccountsPage')
+const ContactsPage = lazyPage(() => import('@/pages/ContactsPage'), 'ContactsPage')
+const ContactDetailPage = lazyPage(() => import('@/pages/ContactDetailPage'), 'ContactDetailPage')
+const DocumentsPage = lazyPage(() => import('@/pages/DocumentsPage'), 'DocumentsPage')
+const DocumentEditorPage = lazyPage(() => import('@/pages/DocumentEditorPage'), 'DocumentEditorPage')
+const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPage')
+const ShopifyPage = lazyPage(() => import('@/pages/ShopifyPage'), 'ShopifyPage')
+const ShopifyOrderPage = lazyPage(() => import('@/pages/ShopifyOrderPage'), 'ShopifyOrderPage')
+const ReportsPage = lazyPage(() => import('@/pages/stubs'), 'ReportsPage')
+const NotesPage = lazyPage(() => import('@/pages/stubs'), 'NotesPage')
 
 function Loading() {
   return (
@@ -59,12 +76,12 @@ export default function App() {
                 <Route path="journal" element={<JournalPage />} />
                 <Route path="konten" element={<AccountsPage />} />
                 <Route path="kunden" element={<ContactsPage />} />
-              <Route path="kunden/:id" element={<ContactDetailPage />} />
+                <Route path="kunden/:id" element={<ContactDetailPage />} />
                 <Route path="dokumente" element={<DocumentsPage />} />
                 <Route path="dokumente/neu" element={<DocumentEditorPage />} />
                 <Route path="dokumente/:id" element={<DocumentEditorPage />} />
                 <Route path="shopify" element={<ShopifyPage />} />
-              <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
+                <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
                 <Route path="auswertungen" element={<ReportsPage />} />
                 <Route path="notizen" element={<NotesPage />} />
                 <Route path="einstellungen" element={<SettingsPage />} />
