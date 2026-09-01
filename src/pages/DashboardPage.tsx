@@ -43,7 +43,7 @@ export function DashboardPage() {
         />
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card>
               <p className="text-xs text-slate-500">Einnahmen</p>
               <p className="mt-1 text-2xl font-bold text-green-600">{formatCHF(stats.inc)}</p>

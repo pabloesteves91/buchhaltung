@@ -148,6 +148,51 @@ export function Badge({
   )
 }
 
+/** Wrap wide tables so they scroll horizontally on small screens instead of
+ *  blowing out the page width. */
+export function TableWrap({ children }: { children: ReactNode }) {
+  return <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">{children}</div>
+}
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  wide,
+}: {
+  open: boolean
+  onClose: () => void
+  title: ReactNode
+  children: ReactNode
+  wide?: boolean
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-8">
+      <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden />
+      <div
+        className={cn(
+          'relative w-full rounded-xl border border-slate-200 bg-white shadow-xl',
+          wide ? 'max-w-3xl' : 'max-w-lg',
+        )}
+      >
+        <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-slate-400 hover:bg-slate-100"
+            aria-label="Schliessen"
+          >
+            ✕
+          </button>
+        </header>
+        <div className="p-4">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 export function EmptyState({
   title,
   description,

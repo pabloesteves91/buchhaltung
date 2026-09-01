@@ -5,6 +5,7 @@ import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
+  persistentMultipleTabManager,
 } from 'firebase/firestore'
 import { connectStorageEmulator, getStorage } from 'firebase/storage'
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions'
@@ -26,7 +27,7 @@ export const app = isFirstInit ? initializeApp(firebaseConfig) : getApp()
 
 export const db = isFirstInit
   ? initializeFirestore(app, {
-      localCache: persistentLocalCache(),
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
       ignoreUndefinedProperties: true,
     })
   : getFirestore(app)

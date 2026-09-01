@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, EmptyState, Field, Input, Select } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, Select, TableWrap } from '@/components/ui'
 import {
   useAccounts,
   useCreateAccount,
@@ -165,7 +165,8 @@ export function AccountsPage() {
 
           {grouped.map(([group, list]) => (
             <Card key={group} title={group}>
-              <table className="w-full text-sm">
+              <TableWrap>
+              <table className="w-full min-w-[520px] text-sm">
                 <tbody>
                   {list.map((a) => (
                     <tr key={a.id} className="border-b border-slate-50 last:border-0">
@@ -204,6 +205,7 @@ export function AccountsPage() {
                   ))}
                 </tbody>
               </table>
+              </TableWrap>
             </Card>
           ))}
         </div>

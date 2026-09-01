@@ -10,22 +10,6 @@ function Stub({ title, subtitle, phase }: { title: string; subtitle: string; pha
   )
 }
 
-export const ContactsPage = () => (
-  <Stub
-    title="Kunden"
-    subtitle="Kundenstamm mit Adressen, Historie und Notizen."
-    phase="Phase 2 (Fakturierung)"
-  />
-)
-
-export const DocumentsPage = () => (
-  <Stub
-    title="Offerten & Rechnungen"
-    subtitle="Dokumente erstellen, als PDF exportieren oder per E-Mail senden."
-    phase="Phase 2 (Fakturierung)"
-  />
-)
-
 export const ShopifyPage = () => (
   <Stub
     title="Shopify"
@@ -43,5 +27,9 @@ export const ReportsPage = () => (
 )
 
 export const NotesPage = () => (
-  <Stub title="Notizen" subtitle="Freie Notizen, auch verknüpft mit Buchungen oder Kunden." phase="Phase 4" />
+  <Stub
+    title="Notizen"
+    subtitle="Freie Notizen, auch verknüpft mit Buchungen oder Kunden."
+    phase="Phase 4"
+  />
 )

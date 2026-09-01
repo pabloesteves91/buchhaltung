@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Field, Input, Select } from '@/components/ui'
 import { DEFAULT_SETTINGS, useSaveSettings, useSettings } from '@/hooks/useSettings'
 import { uploadFile } from '@/lib/storage'
+import { toScaledPngDataUrl } from '@/lib/image'
 import type { CompanySettings } from '@/lib/types'
 
 export function SettingsPage() {
@@ -27,8 +28,11 @@ export function SettingsPage() {
     setUploading(true)
     try {
       const path = `branding/logo-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_')}`
-      const url = await uploadFile(path, file)
-      const next = { ...form, logoStoragePath: path, logoUrl: url }
+      const [url, dataUrl] = await Promise.all([
+        uploadFile(path, file),
+        toScaledPngDataUrl(file).catch(() => undefined),
+      ])
+      const next = { ...form, logoStoragePath: path, logoUrl: url, logoDataUrl: dataUrl }
       setForm(next)
       await save.mutateAsync(next)
     } finally {
@@ -78,7 +82,12 @@ export function SettingsPage() {
                   type="button"
                   variant="ghost"
                   onClick={() => {
-                    const next = { ...form, logoStoragePath: undefined, logoUrl: undefined }
+                    const next = {
+                      ...form,
+                      logoStoragePath: undefined,
+                      logoUrl: undefined,
+                      logoDataUrl: undefined,
+                    }
                     setForm(next)
                     void save.mutateAsync(next)
                   }}

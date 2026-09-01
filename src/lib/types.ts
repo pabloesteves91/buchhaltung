@@ -66,6 +66,8 @@ export type ContactLanguage = 'de' | 'fr' | 'it' | 'en'
 export interface Contact {
   id: string
   type: ContactType
+  /** Lowercased display name, used for stable sorting. */
+  sortName: string
   company?: string
   firstName?: string
   lastName?: string
@@ -212,6 +214,9 @@ export interface CompanySettings {
   fiscalYearStartMonth: number
   logoStoragePath?: string
   logoUrl?: string
+  /** Downscaled PNG data URL, embedded directly into PDFs (no fetch, no CORS,
+   *  byte-stable output). */
+  logoDataUrl?: string
   bank: {
     name?: string
     iban?: string

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, EmptyState, Field, Input, Select, Textarea } from '@/components/ui'
+import { Button, Card, EmptyState, Field, Input, Select, TableWrap, Textarea } from '@/components/ui'
 import { useAccounts } from '@/hooks/useAccounts'
 import {
   useCreateTransaction,
@@ -115,7 +115,7 @@ export function JournalPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-xs text-slate-500">Einnahmen {year}</p>
           <p className="mt-1 text-xl font-semibold text-green-600">{formatCHF(total.inc)}</p>
@@ -235,7 +235,8 @@ export function JournalPage() {
         />
       ) : (
         <Card>
-          <table className="w-full text-sm">
+          <TableWrap>
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
                 <th className="py-2">Datum</th>
@@ -284,6 +285,7 @@ export function JournalPage() {
               ))}
             </tbody>
           </table>
+          </TableWrap>
         </Card>
       )}
     </>
