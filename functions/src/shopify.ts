@@ -77,11 +77,14 @@ async function getConfig(): Promise<ShopifyConfig> {
   if (!d.shopDomain || !clientId || !clientSecret) {
     throw new HttpsError('failed-precondition', 'Shop-Domain, Client-ID oder Client-Secret fehlt.')
   }
+  // Shopify only supports roughly the last four quarterly versions; ignore a
+  // stale stored value.
+  const apiVersion = d.apiVersion && d.apiVersion >= '2025-10' ? d.apiVersion : '2026-07'
   return {
     shopDomain: d.shopDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
     clientId,
     clientSecret,
-    apiVersion: d.apiVersion || '2025-01',
+    apiVersion,
     autoBook: d.autoBook ?? false,
     createContacts: d.createContacts ?? true,
     accounts: d.accounts ?? {},

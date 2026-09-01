@@ -238,7 +238,7 @@ export function ShopifyPage() {
                   shopDomain: form.shopDomain.trim(),
                   clientId: form.clientId.trim(),
                   clientSecret: form.clientSecret.trim(),
-                  apiVersion: '2025-01',
+                  apiVersion: '2026-07',
                   createContacts: true,
                 })
               }
