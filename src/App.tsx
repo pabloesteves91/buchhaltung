@@ -39,8 +39,8 @@ const DocumentEditorPage = lazyPage(() => import('@/pages/DocumentEditorPage'), 
 const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPage')
 const ShopifyPage = lazyPage(() => import('@/pages/ShopifyPage'), 'ShopifyPage')
 const ShopifyOrderPage = lazyPage(() => import('@/pages/ShopifyOrderPage'), 'ShopifyOrderPage')
-const ReportsPage = lazyPage(() => import('@/pages/stubs'), 'ReportsPage')
-const NotesPage = lazyPage(() => import('@/pages/stubs'), 'NotesPage')
+const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
+const NotesPage = lazyPage(() => import('@/pages/NotesPage'), 'NotesPage')
 
 function Loading() {
   return (
