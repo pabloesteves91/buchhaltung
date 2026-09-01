@@ -1,0 +1,51 @@
+{
+  "name": "nipponnites-buchhaltung",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "emulators": "firebase emulators:start --import ./.emulator-data --export-on-exit ./.emulator-data",
+    "seed": "tsx scripts/seed.ts",
+    "deploy": "npm run build && firebase deploy"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.1",
+    "@tanstack/react-query": "^5.90.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.3.0",
+    "lucide-react": "^0.544.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-hook-form": "^7.64.0",
+    "react-router-dom": "^7.9.3",
+    "swissqrbill": "^4.2.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.11",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "firebase-tools": "^15.28.2",
+    "oxlint": "^1.79.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.20.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@firebase/util@1.15.3": true,
+    "protobufjs@7.6.6": true,
+    "fsevents@2.3.3": true,
+    "re2@1.26.1": true
+  }
+}

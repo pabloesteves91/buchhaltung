@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Single-tenant: only the owner can read/write files (receipts, logo, generated PDFs).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner() {
+      return request.auth != null && request.auth.uid == 'cFfEL9tWcFQ8aCr8l9HMq0TYcc63';
+    }
+
+    match /{allPaths=**} {
+      allow read: if isOwner();
+      allow write: if isOwner()
+        && (request.resource == null || request.resource.size < 25 * 1024 * 1024);
+    }
+  }
+}
