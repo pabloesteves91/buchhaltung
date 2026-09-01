@@ -4,6 +4,8 @@ import { Button, Card, Field, Input, Select } from '@/components/ui'
 import { DEFAULT_SETTINGS, useSaveSettings, useSettings } from '@/hooks/useSettings'
 import { uploadFile } from '@/lib/storage'
 import { toScaledPngDataUrl } from '@/lib/image'
+import { exportAllData, downloadBlob } from '@/lib/backup'
+import { todayIso } from '@/lib/format'
 import type { CompanySettings } from '@/lib/types'
 
 export function SettingsPage() {
@@ -41,11 +43,22 @@ export function SettingsPage() {
     }
   }
 
+  const [exporting, setExporting] = useState(false)
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     await save.mutateAsync(form)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      downloadBlob(`buchhaltung-backup-${todayIso()}.json`, await exportAllData())
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -248,6 +261,17 @@ export function SettingsPage() {
           {saved && <span className="text-sm text-green-600">Gespeichert.</span>}
         </div>
       </form>
+
+      <Card title="Datensicherung" className="mt-6">
+        <p className="text-sm text-slate-500">
+          Lädt alle Daten (Konten, Buchungen, Kunden, Dokumente, Notizen, Shopify-Bestellungen,
+          Einstellungen) als eine JSON-Datei herunter. Ohne die generierten PDFs und ohne
+          Shopify-Schlüssel. Am besten regelmässig sichern.
+        </p>
+        <Button type="button" variant="secondary" className="mt-3" onClick={handleExport} disabled={exporting}>
+          {exporting ? 'Wird erstellt …' : 'Alle Daten exportieren (JSON)'}
+        </Button>
+      </Card>
     </>
   )
 }

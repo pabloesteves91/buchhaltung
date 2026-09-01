@@ -40,6 +40,7 @@ const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPag
 const ShopifyPage = lazyPage(() => import('@/pages/ShopifyPage'), 'ShopifyPage')
 const ShopifyOrderPage = lazyPage(() => import('@/pages/ShopifyOrderPage'), 'ShopifyOrderPage')
 const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
+const ClosingPage = lazyPage(() => import('@/pages/ClosingPage'), 'ClosingPage')
 const NotesPage = lazyPage(() => import('@/pages/NotesPage'), 'NotesPage')
 
 function Loading() {
@@ -83,6 +84,7 @@ export default function App() {
                 <Route path="shopify" element={<ShopifyPage />} />
                 <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
                 <Route path="auswertungen" element={<ReportsPage />} />
+                <Route path="abschluss" element={<ClosingPage />} />
                 <Route path="notizen" element={<NotesPage />} />
                 <Route path="einstellungen" element={<SettingsPage />} />
               </Route>

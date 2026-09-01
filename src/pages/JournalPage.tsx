@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, EmptyState, Field, Input, Select, TableWrap, Textarea } from '@/components/ui'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useFiscalYears, isDateLocked } from '@/hooks/useFiscalYears'
 import {
   useCreateTransaction,
   useDeleteTransaction,
@@ -35,8 +36,10 @@ export function JournalPage() {
   const { data: transactions, isLoading } = useTransactions(year)
   const createTx = useCreateTransaction()
   const deleteTx = useDeleteTransaction()
+  const { data: fiscalYears } = useFiscalYears()
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState(emptyForm())
+  const dateLocked = isDateLocked(form.date, fiscalYears)
 
   const paymentAccounts = useMemo(
     () => (accounts ?? []).filter((a) => a.type === 'aktiven' || a.number.startsWith('2')),
@@ -70,6 +73,10 @@ export function JournalPage() {
     e.preventDefault()
     const amount = round2(Number(form.amount))
     if (!amount || amount <= 0 || !form.categoryAccountId || !form.paymentAccountId) return
+    if (isDateLocked(form.date, fiscalYears)) {
+      alert('Dieses Datum liegt in einem abgeschlossenen Geschäftsjahr. Sperre zuerst unter „Jahresabschluss" aufheben.')
+      return
+    }
     await createTx.mutateAsync({
       date: form.date,
       fiscalYear: fiscalYearOf(form.date),
@@ -213,13 +220,18 @@ export function JournalPage() {
                 />
               </Field>
             </div>
-            <div className="col-span-2 flex gap-2 md:col-span-3">
-              <Button type="submit" disabled={createTx.isPending}>
+            <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-3">
+              <Button type="submit" disabled={createTx.isPending || dateLocked}>
                 Buchung speichern
               </Button>
               <Button type="button" variant="ghost" onClick={() => setShowNew(false)}>
                 Abbrechen
               </Button>
+              {dateLocked && (
+                <span className="text-xs text-amber-600">
+                  Datum liegt in einem abgeschlossenen Jahr – gesperrt.
+                </span>
+              )}
             </div>
           </form>
         </Card>
@@ -275,6 +287,10 @@ export function JournalPage() {
                     <button
                       className="text-xs text-slate-400 hover:text-red-600"
                       onClick={() => {
+                        if (isDateLocked(t.date, fiscalYears)) {
+                          alert('Diese Buchung liegt in einem abgeschlossenen Jahr.')
+                          return
+                        }
                         if (confirm('Buchung löschen?')) deleteTx.mutate(t.id)
                       }}
                     >

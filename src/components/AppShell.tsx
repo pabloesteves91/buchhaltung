@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutDashboard,
   ListTree,
+  Lock,
   LogOut,
   Menu,
   Notebook,
@@ -26,6 +27,7 @@ const nav = [
   { to: '/dokumente', label: 'Offerten & Rechnungen', icon: FileText },
   { to: '/shopify', label: 'Shopify', icon: ShoppingBag },
   { to: '/auswertungen', label: 'Auswertungen', icon: BarChart3 },
+  { to: '/abschluss', label: 'Jahresabschluss', icon: Lock },
   { to: '/notizen', label: 'Notizen', icon: Notebook },
   { to: '/einstellungen', label: 'Einstellungen', icon: Settings },
 ]
