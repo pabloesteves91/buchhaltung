@@ -10,14 +10,6 @@ function Stub({ title, subtitle, phase }: { title: string; subtitle: string; pha
   )
 }
 
-export const ShopifyPage = () => (
-  <Stub
-    title="Shopify"
-    subtitle="Bestellungen als Belege übernehmen, Retouren als Gutschrift."
-    phase="Phase 3 (Shopify)"
-  />
-)
-
 export const ReportsPage = () => (
   <Stub
     title="Auswertungen"

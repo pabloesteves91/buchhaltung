@@ -15,7 +15,7 @@ const DocumentEditorPage = lazy(() =>
   import('@/pages/DocumentEditorPage').then((m) => ({ default: m.DocumentEditorPage })),
 )
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
-const ShopifyPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.ShopifyPage })))
+const ShopifyPage = lazy(() => import('@/pages/ShopifyPage').then((m) => ({ default: m.ShopifyPage })))
 const ReportsPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.ReportsPage })))
 const NotesPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.NotesPage })))
 

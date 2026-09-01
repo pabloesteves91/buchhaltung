@@ -1,8 +1,11 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { ShoppingBag } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, EmptyState } from '@/components/ui'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useShopifyOrders } from '@/hooks/useShopify'
 import { formatCHF } from '@/lib/format'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -11,6 +14,8 @@ export function DashboardPage() {
   const year = new Date().getFullYear()
   const { data: transactions, isLoading } = useTransactions(year)
   const { data: accounts } = useAccounts()
+  const { data: shopifyOrders } = useShopifyOrders()
+  const openShopifyCount = (shopifyOrders ?? []).filter((o) => o.bookingStatus === 'open').length
 
   const stats = useMemo(() => {
     const monthly = MONTHS.map(() => ({ inc: 0, exp: 0 }))
@@ -43,6 +48,16 @@ export function DashboardPage() {
         />
       ) : (
         <div className="space-y-6">
+          {openShopifyCount > 0 && (
+            <Link
+              to="/shopify"
+              className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100"
+            >
+              <ShoppingBag className="size-4 shrink-0" />
+              {openShopifyCount} Shopify-Bestellung{openShopifyCount === 1 ? '' : 'en'} noch nicht
+              verbucht →
+            </Link>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card>
               <p className="text-xs text-slate-500">Einnahmen</p>
