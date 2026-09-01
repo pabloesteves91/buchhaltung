@@ -118,6 +118,12 @@ export function useShopifyActions() {
       mutationFn: callable<{ sinceDays: number }, { imported: number }>('importShopifyOrders'),
       onSuccess: invalidate,
     }),
+    importCustomers: useMutation({
+      mutationFn: callable<Record<string, never>, { created: number; updated: number }>(
+        'importShopifyCustomers',
+      ),
+      onSuccess: invalidate,
+    }),
     book: useMutation({
       mutationFn: callable<{ orderId: string | string[] }, { booked: number }>('bookShopifyOrder'),
       onSuccess: invalidate,

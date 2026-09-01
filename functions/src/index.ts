@@ -19,6 +19,7 @@ async function getSecret(key: string): Promise<string | undefined> {
 export {
   testShopifyConnection,
   importShopifyOrders,
+  importShopifyCustomers,
   bookShopifyOrder,
   unbookShopifyOrder,
   registerShopifyWebhooks,

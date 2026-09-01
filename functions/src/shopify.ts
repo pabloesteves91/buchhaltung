@@ -410,6 +410,88 @@ export const importShopifyOrders = onCall<{ sinceDays?: number }>({ region: REGI
   return { imported }
 })
 
+interface ShopifyCustomer {
+  id: number
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  tags?: string
+  default_address?: {
+    company?: string
+    address1?: string
+    zip?: string
+    city?: string
+    country_code?: string
+  }
+}
+
+/** Import every Shopify customer (also those without an order) into contacts. */
+export const importShopifyCustomers = onCall({ region: REGION }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
+  const cfg = await getConfig()
+
+  const existing = await db().collection('contacts').get()
+  const byShopifyId = new Map<string, string>()
+  const byEmail = new Map<string, string>()
+  for (const doc of existing.docs) {
+    const d = doc.data()
+    if (d.shopifyCustomerId) byShopifyId.set(String(d.shopifyCustomerId), doc.id)
+    if (d.email) byEmail.set(String(d.email).toLowerCase(), doc.id)
+  }
+
+  let path: string | null = '/customers.json?limit=250'
+  let created = 0
+  let updated = 0
+  while (path) {
+    const res: Response = await shopifyFetch(cfg, path)
+    const { customers } = (await res.json()) as { customers: ShopifyCustomer[] }
+    for (const c of customers) {
+      const cid = String(c.id)
+      const email = (c.email ?? '').toLowerCase()
+      const a = c.default_address ?? {}
+      const company = a.company ?? ''
+      const name =
+        company || [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Shopify-Kunde'
+      const payload = {
+        type: 'kunde',
+        sortName: name.toLowerCase(),
+        company: company || undefined,
+        firstName: c.first_name ?? '',
+        lastName: c.last_name ?? '',
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        address: {
+          line1: a.address1 ?? '',
+          zip: a.zip ?? '',
+          city: a.city ?? '',
+          country: (a.country_code ?? 'CH').toUpperCase(),
+        },
+        language: 'de',
+        paymentTermDays: 30,
+        tags: ['Shopify'],
+        shopifyCustomerId: cid,
+        updatedAt: FieldValue.serverTimestamp(),
+      }
+      const hitId = byShopifyId.get(cid) ?? (email ? byEmail.get(email) : undefined)
+      if (hitId) {
+        await db().doc(`contacts/${hitId}`).set(payload, { merge: true })
+        updated++
+      } else {
+        await db()
+          .collection('contacts')
+          .add({ ...payload, createdAt: FieldValue.serverTimestamp() })
+        created++
+      }
+    }
+    const link = res.headers.get('link') ?? ''
+    const next = link.match(/<[^>]*[?&]page_info=([^>&]+)[^>]*>;\s*rel="next"/)
+    path = next ? `/customers.json?limit=250&page_info=${next[1]}` : null
+  }
+
+  return { created, updated }
+})
+
 export const bookShopifyOrder = onCall<{ orderId: string | string[] }>({ region: REGION }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
   const ids = Array.isArray(req.data.orderId) ? req.data.orderId : [req.data.orderId]
