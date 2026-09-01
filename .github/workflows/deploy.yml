@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install app deps
@@ -45,9 +45,16 @@ jobs:
           printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
-      - name: Deploy hosting, Firestore & Storage rules
-        run: npx firebase-tools deploy --only hosting,firestore,storage --non-interactive
+      # The web app itself — this must succeed.
+      - name: Deploy Hosting
+        run: npx firebase-tools deploy --only hosting --non-interactive
 
+      # Rules & indexes — change rarely; don't block the app if perms lag.
+      - name: Deploy Firestore & Storage rules
+        run: npx firebase-tools deploy --only firestore,storage --non-interactive
+        continue-on-error: true
+
+      # Cloud Functions — only relevant once Shopify / email are wired up.
       - name: Deploy Cloud Functions
         run: npx firebase-tools deploy --only functions --non-interactive --force
         continue-on-error: true
