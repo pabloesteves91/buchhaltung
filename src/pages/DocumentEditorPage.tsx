@@ -15,6 +15,7 @@ import {
   useUpdateDocument,
 } from '@/hooks/useDocuments'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useProducts } from '@/hooks/useProducts'
 import { useCreateTransaction } from '@/hooks/useTransactions'
 import { amountPaid, computeTotals, newLineItem, openAmount } from '@/lib/documentTotals'
 import { DocumentPdf } from '@/pdf/DocumentPdf'
@@ -86,6 +87,11 @@ export function DocumentEditorPage() {
   const { data: settings } = useSettings()
   const { data: contacts } = useContacts()
   const { data: accounts } = useAccounts()
+  const { data: products } = useProducts({ activeOnly: true })
+  const productByTitle = useMemo(
+    () => new Map((products ?? []).map((p) => [p.title, p])),
+    [products],
+  )
   const { data: existing, isLoading } = useDocument(id)
   const createDoc = useCreateDocument()
   const updateDoc = useUpdateDocument()
@@ -468,6 +474,16 @@ export function DocumentEditorPage() {
           </Card>
 
           <Card title="Positionen">
+            {(products?.length ?? 0) > 0 && (
+              <datalist id="doc-products">
+                {(products ?? []).map((p) => (
+                  <option key={p.id} value={p.title}>
+                    {formatCHF(p.price)}
+                    {p.sku ? ` · ${p.sku}` : ''}
+                  </option>
+                ))}
+              </datalist>
+            )}
             <div className="space-y-2">
               {state.lineItems.map((it, idx) => (
                 <div
@@ -475,10 +491,20 @@ export function DocumentEditorPage() {
                   className="grid grid-cols-2 gap-2 rounded-lg border border-slate-100 p-2 sm:grid-cols-[1fr_70px_60px_80px_60px_28px] sm:border-0 sm:p-0"
                 >
                   <input
+                    list="doc-products"
                     className="col-span-2 rounded-lg border border-slate-300 px-2 py-1.5 text-sm sm:col-span-1"
-                    placeholder={`Position ${idx + 1}`}
+                    placeholder={`Position ${idx + 1} – tippen oder Artikel wählen`}
                     value={it.description}
-                    onChange={(e) => updateItem(it.id, { description: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const prod = productByTitle.get(value)
+                      updateItem(
+                        it.id,
+                        prod
+                          ? { description: value, unitPrice: prod.price, unit: prod.unit }
+                          : { description: value },
+                      )
+                    }}
                   />
                   <input
                     type="number"

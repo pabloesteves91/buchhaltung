@@ -190,6 +190,20 @@ export interface FiscalYear {
   closedAt?: string
 }
 
+export interface Product {
+  id: string
+  source: 'shopify' | 'manual'
+  title: string
+  sku?: string
+  price: number
+  unit: string
+  active: boolean
+  shopifyProductId?: string
+  shopifyVariantId?: string
+  createdAt?: Timestamp
+  updatedAt?: Timestamp
+}
+
 export interface Note {
   id: string
   title: string

@@ -49,7 +49,8 @@ export function ShopifyPage() {
   const { data: accounts } = useAccounts()
   const { data: orders } = useShopifyOrders()
   const { data: payouts } = useShopifyPayouts()
-  const { test, importOrders, importCustomers, importPayouts, registerWebhooks } = useShopifyActions()
+  const { test, importOrders, importCustomers, importPayouts, importProducts, registerWebhooks } =
+    useShopifyActions()
 
   const qc = useQueryClient()
   const csvInput = useRef<HTMLInputElement>(null)
@@ -377,6 +378,21 @@ export function ShopifyPage() {
                 disabled={importCustomers.isPending}
               >
                 {importCustomers.isPending ? 'Importiere …' : 'Alle Kunden importieren'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  setMsg(null)
+                  try {
+                    const r = await importProducts.mutateAsync({})
+                    setMsg(`${r.created} neue Artikel, ${r.updated} aktualisiert.`)
+                  } catch (e) {
+                    setMsg(friendlyError(e))
+                  }
+                }}
+                disabled={importProducts.isPending}
+              >
+                {importProducts.isPending ? 'Importiere …' : 'Produkte importieren'}
               </Button>
               <Button
                 variant="secondary"

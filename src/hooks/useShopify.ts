@@ -158,6 +158,12 @@ export function useShopifyActions() {
       mutationFn: callable<{ sinceDays: number }, { imported: number }>('importShopifyPayouts'),
       onSuccess: () => qc.invalidateQueries({ queryKey: ['shopifyPayouts'] }),
     }),
+    importProducts: useMutation({
+      mutationFn: callable<Record<string, never>, { created: number; updated: number }>(
+        'importShopifyProducts',
+      ),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    }),
     book: useMutation({
       mutationFn: callable<{ orderId: string | string[] }, { booked: number }>('bookShopifyOrder'),
       onSuccess: invalidate,
