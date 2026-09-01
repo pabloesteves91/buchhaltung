@@ -19,6 +19,9 @@ const DocumentEditorPage = lazy(() =>
 )
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const ShopifyPage = lazy(() => import('@/pages/ShopifyPage').then((m) => ({ default: m.ShopifyPage })))
+const ShopifyOrderPage = lazy(() =>
+  import('@/pages/ShopifyOrderPage').then((m) => ({ default: m.ShopifyOrderPage })),
+)
 const ReportsPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.ReportsPage })))
 const NotesPage = lazy(() => import('@/pages/stubs').then((m) => ({ default: m.NotesPage })))
 
@@ -61,6 +64,7 @@ export default function App() {
                 <Route path="dokumente/neu" element={<DocumentEditorPage />} />
                 <Route path="dokumente/:id" element={<DocumentEditorPage />} />
                 <Route path="shopify" element={<ShopifyPage />} />
+              <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
                 <Route path="auswertungen" element={<ReportsPage />} />
                 <Route path="notizen" element={<NotesPage />} />
                 <Route path="einstellungen" element={<SettingsPage />} />

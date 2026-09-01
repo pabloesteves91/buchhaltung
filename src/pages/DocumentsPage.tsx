@@ -120,7 +120,7 @@ export function DocumentsPage() {
                     <tr
                       key={o.id}
                       className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                      onClick={() => navigate('/shopify')}
+                      onClick={() => navigate(`/shopify/bestellung/${o.id}`)}
                     >
                       <td className="py-2 font-medium text-slate-700">{o.orderName}</td>
                       <td className="py-2 text-slate-600">

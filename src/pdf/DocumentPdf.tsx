@@ -112,16 +112,20 @@ export function DocumentPdf({
   document: d,
   settings,
   qrBillPng,
+  receipt,
 }: {
   document: BusinessDocument
   settings: CompanySettings
   qrBillPng?: string | null
+  receipt?: boolean
 }) {
   const isInvoice = d.type === 'rechnung'
   const withQr = Boolean(qrBillPng)
+  const heading = receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type]
+  const paid = d.status === 'bezahlt'
   return (
     <Document
-      title={`${DOCUMENT_TYPE_LABEL[d.type]} ${d.number}`}
+      title={`${heading} ${d.number}`}
       author={settings.name}
       creator="nipponnites Buchhaltung"
       producer="nipponnites Buchhaltung"
@@ -151,7 +155,7 @@ export function DocumentPdf({
 
         <View style={styles.metaRow}>
           <Text style={styles.title}>
-            {DOCUMENT_TYPE_LABEL[d.type]} {d.number}
+            {heading} {d.number}
           </Text>
           <View style={styles.metaTable}>
             <View style={styles.metaLine}>
@@ -226,6 +230,14 @@ export function DocumentPdf({
             <Text>Total CHF</Text>
             <Text>{formatAmount(d.total)}</Text>
           </View>
+          {paid && (
+            <View style={[styles.totalLine, { marginTop: 4 }]}>
+              <Text style={{ color: '#0a7a3d', fontFamily: 'Helvetica-Bold' }}>Bezahlt</Text>
+              <Text style={{ color: '#0a7a3d', fontFamily: 'Helvetica-Bold' }}>
+                −{formatAmount(d.total)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {settings.taxMode === 'none' && isInvoice ? (
