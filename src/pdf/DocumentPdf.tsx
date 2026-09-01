@@ -166,6 +166,12 @@ export function DocumentPdf({
                 <Text>{formatDate(d.dueDate)}</Text>
               </View>
             ) : null}
+            {settings.contactPerson ? (
+              <View style={styles.metaLine}>
+                <Text style={styles.metaLabel}>Ihr Kontakt</Text>
+                <Text>{settings.contactPerson}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
 

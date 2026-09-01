@@ -7,6 +7,7 @@ import type { DocumentType } from '@/lib/types'
 export const DEFAULT_SETTINGS: CompanySettings = {
   name: 'nipponnites',
   legalForm: 'Einzelunternehmen',
+  contactPerson: '',
   address: { line1: '', zip: '', city: '', country: 'CH' },
   email: '',
   taxMode: 'none',

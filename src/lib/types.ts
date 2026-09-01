@@ -203,6 +203,8 @@ export interface Note {
 export interface CompanySettings {
   name: string
   legalForm: string
+  /** Contact person shown on documents ("Ihr Kontakt"). */
+  contactPerson?: string
   address: {
     line1: string
     line2?: string

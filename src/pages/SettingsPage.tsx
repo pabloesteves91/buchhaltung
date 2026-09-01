@@ -110,6 +110,13 @@ export function SettingsPage() {
             <Field label="Rechtsform">
               <Input value={form.legalForm} onChange={(e) => set('legalForm', e.target.value)} />
             </Field>
+            <Field label="Kontaktperson" hint="Erscheint auf Offerten & Rechnungen als „Ihr Kontakt“.">
+              <Input
+                value={form.contactPerson ?? ''}
+                onChange={(e) => set('contactPerson', e.target.value)}
+                placeholder="Vor- und Nachname"
+              />
+            </Field>
             <Field label="Strasse / Nr.">
               <Input
                 value={form.address.line1}
