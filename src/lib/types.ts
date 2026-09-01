@@ -238,6 +238,14 @@ export interface CompanySettings {
     defaultOutroText: string
     accentColor: string
   }
+  dunning?: {
+    /** Fee added at each level (index 0 = 1. Mahnung). CHF. */
+    fees: [number, number, number]
+    /** Days after the previous step before the next reminder is due. */
+    intervalDays: number
+    /** Reminder body text per level. */
+    texts: [string, string, string]
+  }
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

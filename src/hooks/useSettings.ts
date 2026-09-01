@@ -28,6 +28,15 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     defaultOutroText: '',
     accentColor: '#1f47db',
   },
+  dunning: {
+    fees: [0, 20, 40],
+    intervalDays: 14,
+    texts: [
+      'Vermutlich haben Sie die folgende Rechnung übersehen. Wir bitten Sie, den offenen Betrag innert 10 Tagen zu begleichen.',
+      'Trotz unserer ersten Mahnung ist die folgende Rechnung noch offen. Bitte überweisen Sie den Betrag inkl. Mahngebühr umgehend.',
+      'Letzte Mahnung: Bitte begleichen Sie den offenen Betrag innert 5 Tagen. Andernfalls leiten wir rechtliche Schritte ein.',
+    ],
+  },
 }
 
 export function useSettings() {

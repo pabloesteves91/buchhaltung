@@ -113,15 +113,17 @@ export function DocumentPdf({
   settings,
   qrBillPng,
   receipt,
+  headingOverride,
 }: {
   document: BusinessDocument
   settings: CompanySettings
   qrBillPng?: string | null
   receipt?: boolean
+  headingOverride?: string
 }) {
   const isInvoice = d.type === 'rechnung'
   const withQr = Boolean(qrBillPng)
-  const heading = receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type]
+  const heading = headingOverride ?? (receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type])
   const paid = d.status === 'bezahlt'
   return (
     <Document

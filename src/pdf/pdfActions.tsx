@@ -7,8 +7,8 @@ import { DocumentPdf } from './DocumentPdf'
 import { buildQrBillPng } from './qrBill'
 import type { BusinessDocument, CompanySettings } from '@/lib/types'
 
-function fileName(d: BusinessDocument, receipt?: boolean): string {
-  const label = receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type]
+function fileName(d: BusinessDocument, opts: PdfOptions = {}): string {
+  const label = opts.fileLabel ?? (opts.receipt ? 'Beleg' : DOCUMENT_TYPE_LABEL[d.type])
   return `${label}_${d.number}.pdf`.replace(/\s+/g, '_')
 }
 
@@ -17,6 +17,10 @@ export interface PdfOptions {
   withQr?: boolean
   /** Render as a paid receipt (no QR, "Beleg" heading). */
   receipt?: boolean
+  /** Override the document heading (e.g. "1. Mahnung"). */
+  heading?: string
+  /** File name label (defaults to the doc type). */
+  fileLabel?: string
 }
 
 export async function buildPdfBlob(
@@ -27,7 +31,13 @@ export async function buildPdfBlob(
   const wantQr = opts.withQr ?? (d.type === 'rechnung' && !opts.receipt && d.status !== 'bezahlt')
   const qrBillPng = wantQr ? await buildQrBillPng(d, settings) : null
   return pdf(
-    <DocumentPdf document={d} settings={settings} qrBillPng={qrBillPng} receipt={opts.receipt} />,
+    <DocumentPdf
+      document={d}
+      settings={settings}
+      qrBillPng={qrBillPng}
+      receipt={opts.receipt}
+      headingOverride={opts.heading}
+    />,
   ).toBlob()
 }
 
@@ -40,7 +50,7 @@ export async function downloadDocumentPdf(
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = fileName(d, opts.receipt)
+  a.download = fileName(d, opts)
   document.body.appendChild(a)
   a.click()
   a.remove()
@@ -51,9 +61,10 @@ export async function downloadDocumentPdf(
 export async function storeDocumentPdf(
   d: BusinessDocument,
   settings: CompanySettings,
+  opts: PdfOptions = {},
 ): Promise<string> {
-  const blob = await buildPdfBlob(d, settings)
-  const path = `documents/${d.id}/${fileName(d)}`
+  const blob = await buildPdfBlob(d, settings, opts)
+  const path = `documents/${d.id}/${fileName(d, opts)}`
   await uploadFile(path, blob)
   return path
 }
@@ -68,8 +79,13 @@ export async function emailDocument(params: {
   to: string
   subject: string
   body: string
+  pdfOptions?: PdfOptions
 }): Promise<void> {
-  const pdfStoragePath = await storeDocumentPdf(params.document, params.settings)
+  const pdfStoragePath = await storeDocumentPdf(
+    params.document,
+    params.settings,
+    params.pdfOptions,
+  )
   const call = httpsCallable<Record<string, unknown>, SendResult>(functions, 'sendDocumentEmail')
   await call({
     documentId: params.document.id,

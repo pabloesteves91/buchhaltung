@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   BarChart3,
+  BellRing,
   BookText,
   FileText,
   LayoutDashboard,
@@ -25,6 +26,7 @@ const nav = [
   { to: '/konten', label: 'Kontenplan', icon: ListTree },
   { to: '/kunden', label: 'Kunden', icon: Users },
   { to: '/dokumente', label: 'Offerten & Rechnungen', icon: FileText },
+  { to: '/mahnwesen', label: 'Mahnwesen', icon: BellRing },
   { to: '/shopify', label: 'Shopify', icon: ShoppingBag },
   { to: '/auswertungen', label: 'Auswertungen', icon: BarChart3 },
   { to: '/abschluss', label: 'Jahresabschluss', icon: Lock },

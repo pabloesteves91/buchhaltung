@@ -36,6 +36,7 @@ const ContactsPage = lazyPage(() => import('@/pages/ContactsPage'), 'ContactsPag
 const ContactDetailPage = lazyPage(() => import('@/pages/ContactDetailPage'), 'ContactDetailPage')
 const DocumentsPage = lazyPage(() => import('@/pages/DocumentsPage'), 'DocumentsPage')
 const DocumentEditorPage = lazyPage(() => import('@/pages/DocumentEditorPage'), 'DocumentEditorPage')
+const DunningPage = lazyPage(() => import('@/pages/DunningPage'), 'DunningPage')
 const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPage')
 const ShopifyPage = lazyPage(() => import('@/pages/ShopifyPage'), 'ShopifyPage')
 const ShopifyOrderPage = lazyPage(() => import('@/pages/ShopifyOrderPage'), 'ShopifyOrderPage')
@@ -81,6 +82,7 @@ export default function App() {
                 <Route path="dokumente" element={<DocumentsPage />} />
                 <Route path="dokumente/neu" element={<DocumentEditorPage />} />
                 <Route path="dokumente/:id" element={<DocumentEditorPage />} />
+                <Route path="mahnwesen" element={<DunningPage />} />
                 <Route path="shopify" element={<ShopifyPage />} />
                 <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
                 <Route path="auswertungen" element={<ReportsPage />} />

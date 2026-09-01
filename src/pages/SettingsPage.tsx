@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, Field, Input, Select } from '@/components/ui'
+import { Button, Card, Field, Input, Select, Textarea } from '@/components/ui'
 import { DEFAULT_SETTINGS, useSaveSettings, useSettings } from '@/hooks/useSettings'
 import { uploadFile } from '@/lib/storage'
 import { toScaledPngDataUrl } from '@/lib/image'
@@ -254,6 +254,61 @@ export function SettingsPage() {
           </div>
         </Card>
 
+      <Card title="Mahnwesen" className="mt-6">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(['1. Mahnung', '2. Mahnung', 'Letzte Mahnung'] as const).map((label, i) => (
+            <Field key={label} label={`Gebühr ${label} (CHF)`}>
+              <Input
+                type="number"
+                step="1"
+                value={form.dunning?.fees[i] ?? 0}
+                onChange={(e) => {
+                  const fees = [...(form.dunning?.fees ?? [0, 20, 40])] as [number, number, number]
+                  fees[i] = Number(e.target.value)
+                  set('dunning', {
+                    fees,
+                    intervalDays: form.dunning?.intervalDays ?? 14,
+                    texts: form.dunning?.texts ?? ['', '', ''],
+                  })
+                }}
+              />
+            </Field>
+          ))}
+          <Field label="Tage zwischen Mahnstufen">
+            <Input
+              type="number"
+              value={form.dunning?.intervalDays ?? 14}
+              onChange={(e) =>
+                set('dunning', {
+                  fees: form.dunning?.fees ?? [0, 20, 40],
+                  intervalDays: Number(e.target.value),
+                  texts: form.dunning?.texts ?? ['', '', ''],
+                })
+              }
+            />
+          </Field>
+        </div>
+        <div className="mt-3 space-y-2">
+          {(['1. Mahnung', '2. Mahnung', 'Letzte Mahnung'] as const).map((label, i) => (
+            <Field key={label} label={`Text ${label}`}>
+              <Textarea
+                rows={2}
+                value={form.dunning?.texts[i] ?? ''}
+                onChange={(e) => {
+                  const texts = [...(form.dunning?.texts ?? ['', '', ''])] as [string, string, string]
+                  texts[i] = e.target.value
+                  set('dunning', {
+                    fees: form.dunning?.fees ?? [0, 20, 40],
+                    intervalDays: form.dunning?.intervalDays ?? 14,
+                    texts,
+                  })
+                }}
+              />
+            </Field>
+          ))}
+        </div>
+      </Card>
+
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={save.isPending}>
             Speichern
@@ -261,6 +316,7 @@ export function SettingsPage() {
           {saved && <span className="text-sm text-green-600">Gespeichert.</span>}
         </div>
       </form>
+
 
       <Card title="Datensicherung" className="mt-6">
         <p className="text-sm text-slate-500">
