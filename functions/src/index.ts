@@ -9,6 +9,8 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 
 initializeApp()
 const db = getFirestore()
+// Drop undefined fields instead of throwing (Shopify payloads have many optionals).
+db.settings({ ignoreUndefinedProperties: true })
 setGlobalOptions({ region: 'europe-west6', maxInstances: 3 })
 
 async function getSecret(key: string): Promise<string | undefined> {
