@@ -13,8 +13,10 @@ import {
   useShopifyActions,
   useShopifyConfig,
   useShopifyOrders,
+  useShopifyPayouts,
   type ShopifyBookingStatus,
 } from '@/hooks/useShopify'
+import { bookShopifyPayoutLocal, unbookShopifyPayoutLocal } from '@/lib/shopifyBooking'
 import { formatCHF, formatDate } from '@/lib/format'
 
 function friendlyError(e: unknown): string {
@@ -46,7 +48,8 @@ export function ShopifyPage() {
   const saveConfig = useSaveShopifyConfig()
   const { data: accounts } = useAccounts()
   const { data: orders } = useShopifyOrders()
-  const { test, importOrders, importCustomers, registerWebhooks } = useShopifyActions()
+  const { data: payouts } = useShopifyPayouts()
+  const { test, importOrders, importCustomers, importPayouts, registerWebhooks } = useShopifyActions()
 
   const qc = useQueryClient()
   const csvInput = useRef<HTMLInputElement>(null)
@@ -104,6 +107,28 @@ export function ShopifyPage() {
     },
   })
 
+  const bookPayout = useMutation({
+    mutationFn: async (id: string) => {
+      const p = (payouts ?? []).find((x) => x.id === id)
+      if (p) await bookShopifyPayoutLocal(p, cfg)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopifyPayouts'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+    },
+    onError: (e) => setMsg(friendlyError(e)),
+  })
+  const unbookPayout = useMutation({
+    mutationFn: async (id: string) => {
+      const p = (payouts ?? []).find((x) => x.id === id)
+      if (p) await unbookShopifyPayoutLocal(p)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopifyPayouts'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+
   const revenueAccounts = (accounts ?? []).filter((a) => a.type === 'ertrag' && a.active)
   const moneyAccounts = (accounts ?? []).filter((a) => a.type === 'aktiven' && a.active)
   const expenseAccounts = (accounts ?? []).filter((a) => a.type === 'aufwand' && a.active)
@@ -120,7 +145,7 @@ export function ShopifyPage() {
 
   function accountField(
     label: string,
-    key: 'revenueId' | 'shippingId' | 'feeId' | 'moneyId' | 'refundId',
+    key: 'revenueId' | 'shippingId' | 'feeId' | 'moneyId' | 'refundId' | 'bankId',
     list: typeof revenueAccounts,
   ) {
     return (
@@ -285,6 +310,7 @@ export function ShopifyPage() {
               {accountField('Geldkonto (Zahlungseingang)', 'moneyId', moneyAccounts)}
               {accountField('Rückerstattungen', 'refundId', revenueAccounts)}
               {accountField('Shopify-Gebühren', 'feeId', expenseAccounts)}
+              {accountField('Bankkonto (Auszahlungsziel)', 'bankId', moneyAccounts)}
             </div>
             <div className="mt-4 space-y-2">
               <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -351,6 +377,21 @@ export function ShopifyPage() {
                 disabled={importCustomers.isPending}
               >
                 {importCustomers.isPending ? 'Importiere …' : 'Alle Kunden importieren'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  setMsg(null)
+                  try {
+                    const r = await importPayouts.mutateAsync({ sinceDays: 365 })
+                    setMsg(`${r.imported} Auszahlungen importiert.`)
+                  } catch (e) {
+                    setMsg(friendlyError(e))
+                  }
+                }}
+                disabled={importPayouts.isPending}
+              >
+                {importPayouts.isPending ? 'Importiere …' : 'Auszahlungen importieren'}
               </Button>
               <Button
                 variant="secondary"
@@ -479,6 +520,61 @@ export function ShopifyPage() {
                   </tbody>
                 </table>
               </TableWrap>
+            </Card>
+          )}
+
+          {(payouts?.length ?? 0) > 0 && (
+            <Card title="Auszahlungen" className="mt-6">
+              <TableWrap>
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                      <th className="py-2">Datum</th>
+                      <th className="py-2 text-right">Brutto</th>
+                      <th className="py-2 text-right">Gebühren</th>
+                      <th className="py-2 text-right">Auszahlung</th>
+                      <th className="py-2 text-right">Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(payouts ?? []).map((p) => (
+                      <tr key={p.id} className="border-b border-slate-50 last:border-0">
+                        <td className="py-2 whitespace-nowrap text-slate-600">{formatDate(p.date)}</td>
+                        <td className="py-2 text-right text-slate-500">{formatCHF(p.gross)}</td>
+                        <td className="py-2 text-right text-red-600">−{formatCHF(p.fees)}</td>
+                        <td className="py-2 text-right font-medium">{formatCHF(p.net)}</td>
+                        <td className="py-2 text-right">
+                          <Badge tone={p.bookingStatus === 'booked' ? 'green' : 'amber'}>
+                            {p.bookingStatus === 'booked' ? 'Verbucht' : 'Offen'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 text-right">
+                          {p.bookingStatus === 'open' ? (
+                            <button
+                              className="text-xs font-medium text-brand-600 hover:underline"
+                              onClick={() => bookPayout.mutate(p.id)}
+                            >
+                              Verbuchen
+                            </button>
+                          ) : (
+                            <button
+                              className="text-xs text-slate-400 hover:text-red-600"
+                              onClick={() => unbookPayout.mutate(p.id)}
+                            >
+                              Rückgängig
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+              <p className="mt-2 text-xs text-slate-400">
+                Verbucht Gebühren (Konto Shopify-Gebühren) und die Auszahlung als Umbuchung von
+                Shopify Payments aufs Bankkonto. Umsätze sind bereits pro Bestellung verbucht.
+              </p>
             </Card>
           )}
         </>

@@ -22,6 +22,7 @@ export {
   testShopifyConnection,
   importShopifyOrders,
   importShopifyCustomers,
+  importShopifyPayouts,
   bookShopifyOrder,
   unbookShopifyOrder,
   registerShopifyWebhooks,

@@ -61,6 +61,7 @@ interface ShopifyConfig {
     feeId?: string
     moneyId?: string
     refundId?: string
+    bankId?: string
   }
   webhookIds?: number[]
   /** Cached short-lived Admin API token from the client-credentials grant. */
@@ -513,6 +514,80 @@ export const importShopifyCustomers = onCall({ region: REGION }, guard(async () 
 
   return { created, updated }
 }))
+
+interface PayoutTx {
+  type: string
+  amount: string
+  fee: string
+  net: string
+}
+
+/** Import Shopify Payments payouts + their fee breakdown. */
+export const importShopifyPayouts = onCall<{ sinceDays?: number }>(
+  { region: REGION },
+  guard(async (req) => {
+    const cfg = await getConfig()
+    const sinceDays = Math.min(Math.max(req.data?.sinceDays ?? 180, 1), 730)
+    const since = new Date(Date.now() - sinceDays * 86400_000).toISOString().slice(0, 10)
+
+    let path: string | null =
+      `/shopify_payments/payouts.json?limit=250&date_min=${since}`
+    let imported = 0
+    while (path) {
+      const res: Response = await shopifyFetch(cfg, path)
+      const { payouts } = (await res.json()) as {
+        payouts: { id: number; date: string; status: string; amount: string; currency: string }[]
+      }
+      for (const p of payouts) {
+        // Fee / gross breakdown from the balance transactions of this payout.
+        let fees = 0
+        let gross = 0
+        let refunds = 0
+        let adjustments = 0
+        let txPath: string | null =
+          `/shopify_payments/balance/transactions.json?payout_id=${p.id}&limit=250`
+        while (txPath) {
+          const txRes: Response = await shopifyFetch(cfg, txPath)
+          const { transactions } = (await txRes.json()) as { transactions: PayoutTx[] }
+          for (const t of transactions) {
+            fees += num(t.fee)
+            if (t.type === 'charge') gross += num(t.amount)
+            else if (t.type === 'refund') refunds += num(t.amount)
+            else if (t.type === 'adjustment' || t.type === 'dispute') adjustments += num(t.amount)
+          }
+          const link = txRes.headers.get('link') ?? ''
+          const next = link.match(/<[^>]*[?&]page_info=([^>&]+)[^>]*>;\s*rel="next"/)
+          txPath = next
+            ? `/shopify_payments/balance/transactions.json?limit=250&page_info=${next[1]}`
+            : null
+        }
+        const ref = db().doc(`shopifyPayouts/${p.id}`)
+        const existing = await ref.get()
+        await ref.set(
+          {
+            payoutId: String(p.id),
+            date: p.date,
+            status: p.status,
+            currency: p.currency,
+            net: num(p.amount),
+            gross: Math.round(gross * 100) / 100,
+            fees: Math.round(Math.abs(fees) * 100) / 100,
+            refunds: Math.round(Math.abs(refunds) * 100) / 100,
+            adjustments: Math.round(adjustments * 100) / 100,
+            bookingStatus: existing.exists ? existing.data()?.bookingStatus ?? 'open' : 'open',
+            receivedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        )
+        imported++
+      }
+      const link = res.headers.get('link') ?? ''
+      const next = link.match(/<[^>]*[?&]page_info=([^>&]+)[^>]*>;\s*rel="next"/)
+      path = next ? `/shopify_payments/payouts.json?limit=250&page_info=${next[1]}` : null
+    }
+    return { imported }
+  }),
+)
 
 export const bookShopifyOrder = onCall<{ orderId: string | string[] }>({ region: REGION }, guard(async (req) => {
   const ids = Array.isArray(req.data.orderId) ? req.data.orderId : [req.data.orderId]

@@ -24,6 +24,7 @@ export const Collections = {
   notes: 'notes',
   fiscalYears: 'fiscalYears',
   shopifyOrders: 'shopifyOrders',
+  shopifyPayouts: 'shopifyPayouts',
   numberSequences: 'numberSequences',
   auditLog: 'auditLog',
 } as const

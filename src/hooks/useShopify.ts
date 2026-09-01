@@ -40,6 +40,21 @@ export interface ShopifyOrderDoc {
   lineItems: { title: string; quantity: number; price: number }[]
 }
 
+export interface ShopifyPayoutDoc {
+  id: string
+  payoutId: string
+  date: string
+  status: string
+  currency: string
+  net: number
+  gross: number
+  fees: number
+  refunds: number
+  adjustments: number
+  bookingStatus: 'open' | 'booked'
+  bookedTransactionIds?: string[]
+}
+
 export interface ShopifyConfig {
   shopDomain?: string
   clientId?: string
@@ -53,6 +68,7 @@ export interface ShopifyConfig {
     feeId?: string
     moneyId?: string
     refundId?: string
+    bankId?: string
   }
   connected?: boolean
   shopName?: string
@@ -92,6 +108,16 @@ export function useShopifyOrders() {
   })
 }
 
+export function useShopifyPayouts() {
+  return useQuery({
+    queryKey: ['shopifyPayouts'],
+    queryFn: async () => {
+      const all = await listDocs<ShopifyPayoutDoc>(Collections.shopifyPayouts)
+      return all.sort((a, b) => (a.date < b.date ? 1 : -1))
+    },
+  })
+}
+
 function callable<TIn, TOut>(name: string) {
   const fn = httpsCallable<TIn, TOut>(functions, name)
   return async (data: TIn) => (await fn(data)).data
@@ -127,6 +153,10 @@ export function useShopifyActions() {
         'importShopifyCustomers',
       ),
       onSuccess: invalidate,
+    }),
+    importPayouts: useMutation({
+      mutationFn: callable<{ sinceDays: number }, { imported: number }>('importShopifyPayouts'),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['shopifyPayouts'] }),
     }),
     book: useMutation({
       mutationFn: callable<{ orderId: string | string[] }, { booked: number }>('bookShopifyOrder'),
