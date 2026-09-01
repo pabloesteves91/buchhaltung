@@ -114,6 +114,8 @@ export async function importShopifyOrdersCsv(
       tax: n(head['Taxes']),
       shipping,
       goods: Math.round((total - shipping) * 100) / 100,
+      discountTotal: n(head['Discount Amount']),
+      discountCodes: head['Discount Code'] ? [head['Discount Code']] : [],
       customerName,
       customerEmail: email,
       contactId,

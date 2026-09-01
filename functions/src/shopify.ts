@@ -170,6 +170,8 @@ interface ShopifyOrder {
   total_price: string
   total_tax: string
   total_discounts: string
+  total_line_items_price?: string
+  discount_codes?: { code: string; amount: string; type?: string }[]
   total_shipping_price_set?: { shop_money?: { amount?: string } }
   shipping_lines?: { price: string }[]
   customer?: {
@@ -205,6 +207,8 @@ function orderSummary(o: ShopifyOrder) {
     tax: num(o.total_tax),
     shipping,
     goods: num(o.total_price) - shipping,
+    discountTotal: num(o.total_discounts),
+    discountCodes: (o.discount_codes ?? []).map((d) => d.code).filter(Boolean),
     customerName:
       [o.customer?.first_name, o.customer?.last_name].filter(Boolean).join(' ') ||
       o.customer?.default_address?.company ||

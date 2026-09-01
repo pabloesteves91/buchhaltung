@@ -26,6 +26,9 @@ export interface ShopifyOrderDoc {
   tax: number
   shipping: number
   goods: number
+  discountTotal?: number
+  discountCodes?: string[]
+  raw?: Record<string, unknown>
   customerName: string
   customerEmail: string | null
   shopifyCustomerId?: string | null

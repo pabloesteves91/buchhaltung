@@ -7,6 +7,21 @@ export function orderIsPaid(order: ShopifyOrderDoc): boolean {
   return order.financialStatus === 'paid' || order.financialStatus === 'partially_refunded'
 }
 
+/** Discount info, falling back to the raw Shopify payload for orders imported
+ *  before discounts were captured. */
+export function orderDiscount(order: ShopifyOrderDoc): { total: number; codes: string[] } {
+  if (order.discountTotal !== undefined) {
+    return { total: order.discountTotal, codes: order.discountCodes ?? [] }
+  }
+  const raw = order.raw as
+    | { total_discounts?: string; discount_codes?: { code?: string }[] }
+    | undefined
+  return {
+    total: Math.round(Number(raw?.total_discounts ?? 0) * 100) / 100,
+    codes: (raw?.discount_codes ?? []).map((d) => d.code ?? '').filter(Boolean),
+  }
+}
+
 /**
  * Build a read-only BusinessDocument from a Shopify order so it can be rendered
  * with the normal invoice PDF template. Never stored — recomputed on demand.
@@ -36,6 +51,8 @@ export function orderToDocument(
   }
 
   const paid = orderIsPaid(order)
+  const { total: discountTotal, codes: discountCodes } = orderDiscount(order)
+  const grossLineItems = lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0)
   const address = contact
     ? [
         contact.address.line1,
@@ -66,8 +83,8 @@ export function orderToDocument(
     currency: 'CHF',
     lineItems,
     globalDiscountPct: 0,
-    subtotal: round2(order.goods + order.shipping),
-    discountTotal: 0,
+    subtotal: round2(discountTotal > 0 ? grossLineItems : order.goods + order.shipping),
+    discountTotal: round2(discountTotal),
     total: round2(order.total),
     roundingDelta: 0,
     status: paid ? 'bezahlt' : 'versendet',
@@ -82,9 +99,14 @@ export function orderToDocument(
         ]
       : [],
     introText: settings.invoice.defaultIntroText || undefined,
-    outroText: paid
-      ? `Betrag dankend erhalten – bezahlt via Shopify (Bestellung ${order.orderName}).`
-      : settings.invoice.defaultOutroText || undefined,
+    outroText: [
+      discountCodes.length > 0 ? `Rabattcode: ${discountCodes.join(', ')}` : '',
+      paid
+        ? `Betrag dankend erhalten – bezahlt via Shopify (Bestellung ${order.orderName}).`
+        : settings.invoice.defaultOutroText || '',
+    ]
+      .filter(Boolean)
+      .join('\n') || undefined,
     templateId: 'default',
     dunningLevel: 0,
   }

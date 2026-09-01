@@ -10,12 +10,14 @@ import { useShopifyOrders } from '@/hooks/useShopify'
 import {
   accountBalances,
   byCategory,
+  discountUsage,
   downloadCsv,
   monthlyBuckets,
   toCsv,
   topCustomers,
   topProducts,
 } from '@/lib/reporting'
+import { orderDiscount } from '@/lib/shopifyDocument'
 import { formatCHF } from '@/lib/format'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -76,6 +78,10 @@ export function ReportsPage() {
     [orders, docs],
   )
   const products = useMemo(() => topProducts(orders ?? []).slice(0, 10), [orders])
+  const discounts = useMemo(
+    () => discountUsage(orders ?? [], orderDiscount).slice(0, 10),
+    [orders],
+  )
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
   const hasData = (allTx?.length ?? 0) > 0 || (orders?.length ?? 0) > 0
@@ -227,6 +233,30 @@ export function ReportsPage() {
                             <span className="ml-2 text-xs text-slate-400">{c.orders}×</span>
                           </td>
                           <td className="py-1.5 text-right font-medium">{formatCHF(c.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableWrap>
+              )}
+            </Card>
+
+            <Card title="Rabatte (Shopify)">
+              {discounts.length === 0 ? (
+                <p className="py-3 text-sm text-slate-400">Keine Rabatte verwendet.</p>
+              ) : (
+                <TableWrap>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {discounts.map((d) => (
+                        <tr key={d.code} className="border-b border-slate-50 last:border-0">
+                          <td className="py-1.5">
+                            {d.code}
+                            <span className="ml-2 text-xs text-slate-400">{d.count}×</span>
+                          </td>
+                          <td className="py-1.5 text-right font-medium text-amber-600">
+                            −{formatCHF(d.amount)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -123,6 +123,30 @@ export function topProducts(orders: ShopifyOrderDoc[]): ProductLine[] {
   return [...map.values()].sort((a, b) => b.revenue - a.revenue)
 }
 
+export interface DiscountLine {
+  code: string
+  count: number
+  amount: number
+}
+
+export function discountUsage(
+  orders: ShopifyOrderDoc[],
+  discountOf: (o: ShopifyOrderDoc) => { total: number; codes: string[] },
+): DiscountLine[] {
+  const map = new Map<string, DiscountLine>()
+  for (const o of orders) {
+    if (o.bookingStatus === 'cancelled') continue
+    const d = discountOf(o)
+    if (d.total <= 0) continue
+    const key = d.codes[0] || '(ohne Code)'
+    const cur = map.get(key) ?? { code: key, count: 0, amount: 0 }
+    cur.count += 1
+    cur.amount = round2(cur.amount + d.total)
+    map.set(key, cur)
+  }
+  return [...map.values()].sort((a, b) => b.amount - a.amount)
+}
+
 export function toCsv(rows: (string | number)[][]): string {
   return rows
     .map((r) =>

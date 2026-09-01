@@ -7,7 +7,7 @@ import { Badge, Button, Card, Modal, TableWrap } from '@/components/ui'
 import { useContacts } from '@/hooks/useContacts'
 import { useSettings } from '@/hooks/useSettings'
 import { useShopifyOrders } from '@/hooks/useShopify'
-import { orderIsPaid, orderToDocument } from '@/lib/shopifyDocument'
+import { orderDiscount, orderIsPaid, orderToDocument } from '@/lib/shopifyDocument'
 import { DocumentPdf } from '@/pdf/DocumentPdf'
 import { buildQrBillPng } from '@/pdf/qrBill'
 import { downloadDocumentPdf } from '@/pdf/pdfActions'
@@ -28,6 +28,7 @@ export function ShopifyOrderPage() {
   const order = (orders ?? []).find((o) => o.id === orderId || o.orderId === orderId)
   const contact = contacts?.find((c) => c.id === order?.contactId)
   const paid = order ? orderIsPaid(order) : false
+  const discount = order ? orderDiscount(order) : { total: 0, codes: [] }
 
   const doc = useMemo(
     () => (order && settings ? orderToDocument(order, contact, settings) : null),
@@ -92,6 +93,12 @@ export function ShopifyOrderPage() {
         <Badge tone={order.bookingStatus === 'booked' ? 'green' : 'slate'}>
           {order.bookingStatus === 'booked' ? 'In Buchhaltung verbucht' : 'Noch nicht verbucht'}
         </Badge>
+        {discount.total > 0 && (
+          <Badge tone="amber">
+            Rabatt {formatCHF(discount.total)}
+            {discount.codes.length > 0 ? ` · ${discount.codes.join(', ')}` : ''}
+          </Badge>
+        )}
         <span className="text-slate-400">Zahlungsstatus Shopify: {order.financialStatus}</span>
       </div>
 
@@ -144,7 +151,21 @@ export function ShopifyOrderPage() {
             </table>
           </TableWrap>
           <div className="mt-3 flex justify-end">
-            <div className="w-48 space-y-1 text-sm">
+            <div className="w-56 space-y-1 text-sm">
+              {discount.total > 0 && (
+                <>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Zwischensumme</span>
+                    <span>{formatCHF(order.goods + order.shipping + discount.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>
+                      Rabatt{discount.codes.length > 0 ? ` (${discount.codes.join(', ')})` : ''}
+                    </span>
+                    <span>−{formatCHF(discount.total)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold">
                 <span>Total</span>
                 <span>{formatCHF(order.total)}</span>
