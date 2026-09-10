@@ -9,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { cn } from '@/lib/cn'
 
 export interface ConfirmOptions {
   title: string
@@ -70,10 +69,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => settle(true)}
-              className={cn(
-                options?.destructive &&
-                  'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/30',
-              )}
+              variant={options?.destructive ? 'destructive' : 'default'}
             >
               {options?.confirmLabel ?? 'Bestätigen'}
             </AlertDialogAction>

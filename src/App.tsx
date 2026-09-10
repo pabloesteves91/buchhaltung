@@ -77,7 +77,7 @@ export default function App() {
           <BrowserRouter>
             <Suspense fallback={<Loading />}>
               <Routes>
-                <Route path="/login" element={<LoginPage />} />
+                  <Route path="/login" element={<LoginPage />} />
                 <Route element={<Protected />}>
                   <Route index element={<DashboardPage />} />
                   <Route path="journal" element={<JournalPage />} />
