@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, EmptyState, Field, Input, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, Skeleton, TableWrap } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { useConfirm } from '@/hooks/useConfirm'
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -13,6 +14,7 @@ import { useShopifyActions } from '@/hooks/useShopify'
 import { round2 } from '@/lib/format'
 
 export function ProductsPage() {
+  const confirm = useConfirm()
   const { data: products, isLoading } = useProducts()
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
@@ -76,7 +78,7 @@ export function ProductsPage() {
         }
       />
 
-      {msg && <p className="mb-4 text-sm text-slate-600">{msg}</p>}
+      {msg && <p className="mb-4 text-sm text-muted-foreground">{msg}</p>}
 
       {showNew && (
         <Card title="Neuer Artikel" className="mb-4">
@@ -125,14 +127,20 @@ export function ProductsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             {products?.length} Artikel · {shopifyCount} aus Shopify
           </span>
         </div>
       )}
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <Card>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        </Card>
       ) : (products?.length ?? 0) === 0 ? (
         <EmptyState
           title="Noch keine Artikel"
@@ -144,7 +152,7 @@ export function ProductsPage() {
           <TableWrap>
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
                   <th className="py-2">Bezeichnung</th>
                   <th className="py-2">SKU</th>
                   <th className="py-2 w-28 text-right">Preis CHF</th>
@@ -155,15 +163,21 @@ export function ProductsPage() {
               </thead>
               <tbody>
                 {filtered.map((p) => (
-                  <tr key={p.id} className={cn('border-b border-slate-50 last:border-0', !p.active && 'opacity-40')}>
+                  <tr
+                    key={p.id}
+                    className={cn(
+                      'border-b border-border/70 last:border-0',
+                      !p.active && 'opacity-40',
+                    )}
+                  >
                     <td className="py-1.5">{p.title}</td>
-                    <td className="py-1.5 text-slate-400">{p.sku || '–'}</td>
+                    <td className="py-1.5 text-muted-foreground">{p.sku || '–'}</td>
                     <td className="py-1.5 text-right">
                       <input
                         type="number"
                         step="0.05"
                         defaultValue={p.price}
-                        className="no-spin w-24 rounded border border-slate-200 px-2 py-1 text-right"
+                        className="no-spin w-24 rounded border border-input px-2 py-1 text-right outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
                         onBlur={(e) => {
                           const v = round2(Number(e.target.value))
                           if (v !== p.price) updateProduct.mutate({ id: p.id, price: v })
@@ -173,7 +187,7 @@ export function ProductsPage() {
                     <td className="py-1.5">
                       <input
                         defaultValue={p.unit}
-                        className="w-16 rounded border border-slate-200 px-2 py-1"
+                        className="w-16 rounded border border-input px-2 py-1 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
                         onBlur={(e) => {
                           if (e.target.value !== p.unit)
                             updateProduct.mutate({ id: p.id, unit: e.target.value })
@@ -187,16 +201,23 @@ export function ProductsPage() {
                     </td>
                     <td className="py-1.5 text-right">
                       <button
-                        className="text-xs text-slate-400 hover:text-brand-600"
+                        className="text-xs text-muted-foreground hover:text-brand-600"
                         onClick={() => updateProduct.mutate({ id: p.id, active: !p.active })}
                       >
                         {p.active ? 'Ausblenden' : 'Einblenden'}
                       </button>
                       {p.source === 'manual' && (
                         <button
-                          className="ml-2 text-slate-300 hover:text-red-600"
-                          onClick={() => {
-                            if (confirm(`Artikel „${p.title}“ löschen?`)) deleteProduct.mutate(p.id)
+                          className="ml-2 text-muted-foreground transition-colors hover:text-destructive"
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: `Artikel „${p.title}“ löschen?`,
+                                destructive: true,
+                                confirmLabel: 'Löschen',
+                              })
+                            )
+                              deleteProduct.mutate(p.id)
                           }}
                         >
                           <Trash2 className="inline size-4" />
@@ -208,7 +229,7 @@ export function ProductsPage() {
               </tbody>
             </table>
           </TableWrap>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-muted-foreground">
             Preis anpassen: Feld ändern und wegklicken. Preise gelten für neue Offerten/Rechnungen –
             bestehende Dokumente bleiben unverändert.
           </p>

@@ -5,7 +5,7 @@ import { importShopifyOrdersCsv } from '@/lib/shopifyCsv'
 import { bookShopifyOrderLocal, unbookShopifyOrderLocal } from '@/lib/shopifyBooking'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, EmptyState, Field, Input, Select, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, Select, Skeleton, TableWrap } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useAccounts } from '@/hooks/useAccounts'
 import {
@@ -178,7 +178,15 @@ export function ShopifyPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-slate-400">Laden …</p>
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    )
+  }
 
   const isConfigured = Boolean(cfg.shopDomain && cfg.clientId && cfg.clientSecret)
 
@@ -205,7 +213,7 @@ export function ShopifyPage() {
                 )}
               </Badge>
               {cfg.lastImportAt && (
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                   Letzter Import: {formatDate(cfg.lastImportAt.slice(0, 10))}
                 </span>
               )}
@@ -225,11 +233,11 @@ export function ShopifyPage() {
                 Zugang ändern
               </Button>
             </div>
-            {msg && <p className="text-sm text-slate-600">{msg}</p>}
+            {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Im Shopify <em>Dev Dashboard</em> deine App öffnen → <em>App-Einstellungen</em> →
               Abschnitt <em>Anmeldedaten</em>. Client-ID kopieren, beim Schlüssel aufs Auge klicken
               und kopieren. Die App muss auf deinem Shop installiert sein, mit Zugriff auf
@@ -278,7 +286,7 @@ export function ShopifyPage() {
 
       {/* CSV import — works without any API setup */}
       <Card title="Import aus CSV" className="mb-6">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Alternative ohne API: in Shopify unter <em>Bestellungen → Exportieren</em> eine CSV
           herunterladen und hier hochladen. Doppelte werden automatisch übersprungen.
         </p>
@@ -298,7 +306,7 @@ export function ShopifyPage() {
           <Upload className="size-4" />
           {csvBusy ? 'Importiere …' : 'CSV hochladen'}
         </Button>
-        {msg && !isConfigured && <p className="mt-3 text-sm text-slate-600">{msg}</p>}
+        {msg && !isConfigured && <p className="mt-3 text-sm text-muted-foreground">{msg}</p>}
       </Card>
 
       {(isConfigured || (orders?.length ?? 0) > 0) && (
@@ -314,7 +322,7 @@ export function ShopifyPage() {
               {accountField('Bankkonto (Auszahlungsziel)', 'bankId', moneyAccounts)}
             </div>
             <div className="mt-4 space-y-2">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={cfg.createContacts ?? true}
@@ -322,7 +330,7 @@ export function ShopifyPage() {
                 />
                 Kunden aus Bestellungen automatisch in den Kundenstamm übernehmen
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={cfg.autoBook ?? false}
@@ -425,7 +433,7 @@ export function ShopifyPage() {
                 Webhooks registrieren
               </Button>
             </div>
-            {msg && <p className="mt-3 text-sm text-slate-600">{msg}</p>}
+            {msg && <p className="mt-3 text-sm text-muted-foreground">{msg}</p>}
           </Card>
           )}
 
@@ -437,8 +445,10 @@ export function ShopifyPage() {
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   className={cn(
-                    'rounded-lg px-3 py-1.5 text-sm font-medium',
-                    filter === f.key ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100',
+                    'rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+                    filter === f.key
+                      ? 'border-brand-600 bg-brand-600 text-white'
+                      : 'border-border bg-card text-muted-foreground hover:bg-muted',
                   )}
                 >
                   {f.label}
@@ -477,7 +487,7 @@ export function ShopifyPage() {
               <TableWrap>
                 <table className="w-full min-w-[640px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2">Bestellung</th>
                       <th className="py-2">Datum</th>
                       <th className="py-2">Kunde</th>
@@ -488,10 +498,10 @@ export function ShopifyPage() {
                   </thead>
                   <tbody>
                     {filtered.map((o) => (
-                      <tr key={o.id} className="border-b border-slate-50 last:border-0">
-                        <td className="py-2 font-medium text-slate-700">{o.orderName}</td>
-                        <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(o.date)}</td>
-                        <td className="py-2 text-slate-600">
+                      <tr key={o.id} className="border-b border-border/70 last:border-0">
+                        <td className="py-2 font-medium text-foreground">{o.orderName}</td>
+                        <td className="py-2 whitespace-nowrap text-muted-foreground">{formatDate(o.date)}</td>
+                        <td className="py-2 text-muted-foreground">
                           {o.customerName}
                           {o.contactId && (
                             <Link
@@ -519,14 +529,14 @@ export function ShopifyPage() {
                           )}
                           {o.bookingStatus === 'booked' && (
                             <button
-                              className="text-xs text-slate-400 hover:text-red-600"
+                              className="text-xs text-muted-foreground transition-colors hover:text-destructive"
                               onClick={() => unbook.mutate(o.orderId)}
                             >
                               Rückgängig
                             </button>
                           )}
                           {o.bookingStatus === 'refund_pending' && (
-                            <span className="text-xs text-red-600">
+                            <span className="text-xs text-destructive">
                               −{formatCHF(o.pendingRefund ?? 0)}
                             </span>
                           )}
@@ -544,7 +554,7 @@ export function ShopifyPage() {
               <TableWrap>
                 <table className="w-full min-w-[560px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2">Datum</th>
                       <th className="py-2 text-right">Brutto</th>
                       <th className="py-2 text-right">Gebühren</th>
@@ -555,10 +565,10 @@ export function ShopifyPage() {
                   </thead>
                   <tbody>
                     {(payouts ?? []).map((p) => (
-                      <tr key={p.id} className="border-b border-slate-50 last:border-0">
-                        <td className="py-2 whitespace-nowrap text-slate-600">{formatDate(p.date)}</td>
-                        <td className="py-2 text-right text-slate-500">{formatCHF(p.gross)}</td>
-                        <td className="py-2 text-right text-red-600">−{formatCHF(p.fees)}</td>
+                      <tr key={p.id} className="border-b border-border/70 last:border-0">
+                        <td className="py-2 whitespace-nowrap text-muted-foreground">{formatDate(p.date)}</td>
+                        <td className="py-2 text-right text-muted-foreground">{formatCHF(p.gross)}</td>
+                        <td className="py-2 text-right text-destructive tabular-nums">−{formatCHF(p.fees)}</td>
                         <td className="py-2 text-right font-medium">{formatCHF(p.net)}</td>
                         <td className="py-2 text-right">
                           <Badge tone={p.bookingStatus === 'booked' ? 'green' : 'amber'}>
@@ -575,7 +585,7 @@ export function ShopifyPage() {
                             </button>
                           ) : (
                             <button
-                              className="text-xs text-slate-400 hover:text-red-600"
+                              className="text-xs text-muted-foreground transition-colors hover:text-destructive"
                               onClick={() => unbookPayout.mutate(p.id)}
                             >
                               Rückgängig
@@ -587,7 +597,7 @@ export function ShopifyPage() {
                   </tbody>
                 </table>
               </TableWrap>
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Verbucht Gebühren (Konto Shopify-Gebühren) und die Auszahlung als Umbuchung von
                 Shopify Payments aufs Bankkonto. Umsätze sind bereits pro Bestellung verbucht.
               </p>
