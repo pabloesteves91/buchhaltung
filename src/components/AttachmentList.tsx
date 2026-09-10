@@ -56,24 +56,24 @@ export function AttachmentList({
           {attachments.map((a) => (
             <li
               key={a.storagePath}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
+              className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
             >
               {a.contentType.startsWith('image/') ? (
-                <ImageIcon className="size-4 shrink-0 text-slate-400" />
+                <ImageIcon className="size-4 shrink-0 text-muted-foreground" />
               ) : (
-                <FileText className="size-4 shrink-0 text-slate-400" />
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
               )}
               <button
                 type="button"
-                className="flex-1 truncate text-left text-slate-700 hover:text-brand-600"
+                className="flex-1 truncate text-left text-foreground transition-colors hover:text-brand-600"
                 onClick={() => open(a)}
               >
                 {a.name}
               </button>
-              <span className="text-xs text-slate-400">{fmtSize(a.size)}</span>
+              <span className="text-xs text-muted-foreground">{fmtSize(a.size)}</span>
               <button
                 type="button"
-                className="text-slate-300 hover:text-red-600"
+                className="text-muted-foreground transition-colors hover:text-destructive"
                 onClick={() => remove(a)}
               >
                 <Trash2 className="size-4" />

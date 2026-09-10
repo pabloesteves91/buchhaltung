@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Pencil, Phone } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge, Button, Card, TableWrap } from '@/components/ui'
+import { StatCard } from '@/components/StatCard'
+import { cn } from '@/lib/cn'
 import { ContactFormModal, TYPE_LABEL } from '@/components/ContactFormModal'
 import { contactName, useContacts } from '@/hooks/useContacts'
 import { useDocuments, DOCUMENT_TYPE_LABEL } from '@/hooks/useDocuments'
@@ -59,7 +61,7 @@ export function ContactDetailPage() {
     return (
       <>
         <PageHeader title="Kunde" />
-        <p className="text-sm text-slate-400">Nicht gefunden.</p>
+        <p className="text-sm text-muted-foreground">Nicht gefunden.</p>
         <Button variant="ghost" className="mt-3" onClick={() => navigate('/kunden')}>
           <ArrowLeft className="size-4" /> Zurück
         </Button>
@@ -87,11 +89,13 @@ export function ContactDetailPage() {
         {/* Stammdaten */}
         <div className="space-y-4">
           <Card title="Stammdaten">
-            <div className="space-y-1 text-sm text-slate-600">
+            <div className="space-y-1 text-sm text-muted-foreground">
               <Badge tone={contact.type === 'lieferant' ? 'amber' : 'blue'}>
                 {TYPE_LABEL[contact.type]}
               </Badge>
-              {contact.company && <p className="mt-2 font-medium text-slate-800">{contact.company}</p>}
+              {contact.company && (
+                <p className="mt-2 font-medium text-foreground">{contact.company}</p>
+              )}
               {(contact.firstName || contact.lastName) && (
                 <p>
                   {contact.firstName} {contact.lastName}
@@ -115,7 +119,9 @@ export function ContactDetailPage() {
                   <Phone className="size-3.5" /> {contact.phone}
                 </p>
               )}
-              <p className="pt-1 text-slate-400">Zahlungsfrist {contact.paymentTermDays} Tage</p>
+              <p className="pt-1 text-muted-foreground">
+                Zahlungsfrist {contact.paymentTermDays} Tage
+              </p>
             </div>
             {contact.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
@@ -125,18 +131,19 @@ export function ContactDetailPage() {
               </div>
             )}
             {contact.note && (
-              <p className="mt-3 rounded-lg bg-slate-50 p-2 text-sm text-slate-600">{contact.note}</p>
+              <p className="mt-3 rounded-lg bg-muted p-2 text-sm text-muted-foreground">
+                {contact.note}
+              </p>
             )}
           </Card>
 
-          <Card>
-            <p className="text-xs text-slate-500">Umsatz gesamt</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{formatCHF(revenue)}</p>
-            <p className="mt-1 text-xs text-slate-400">
-              {orders.length} Shopify-Bestellungen · {docs.filter((d) => d.type === 'rechnung').length}{' '}
-              Rechnungen
-            </p>
-          </Card>
+          <StatCard
+            label="Umsatz gesamt"
+            value={formatCHF(revenue)}
+            hint={`${orders.length} Shopify-Bestellungen · ${
+              docs.filter((d) => d.type === 'rechnung').length
+            } Rechnungen`}
+          />
         </div>
 
         {/* Historie */}
@@ -146,12 +153,12 @@ export function ContactDetailPage() {
             actions={<Link to="/shopify" className="text-xs text-brand-600 hover:underline">Shopify</Link>}
           >
             {orders.length === 0 ? (
-              <p className="py-4 text-center text-sm text-slate-400">Keine Bestellungen.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">Keine Bestellungen.</p>
             ) : (
               <TableWrap>
                 <table className="w-full min-w-[440px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2">Nr.</th>
                       <th className="py-2">Datum</th>
                       <th className="py-2 text-right">Betrag</th>
@@ -162,11 +169,11 @@ export function ContactDetailPage() {
                     {orders.map((o) => (
                       <tr
                         key={o.id}
-                        className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                        className="cursor-pointer border-b border-border/70 last:border-0 transition-colors hover:bg-muted/60"
                         onClick={() => navigate(`/shopify/bestellung/${o.id}`)}
                       >
-                        <td className="py-2 font-medium text-slate-700">{o.orderName}</td>
-                        <td className="py-2 text-slate-500">{formatDate(o.date)}</td>
+                        <td className="py-2 font-medium text-foreground">{o.orderName}</td>
+                        <td className="py-2 text-muted-foreground">{formatDate(o.date)}</td>
                         <td className="py-2 text-right">{formatCHF(o.total)}</td>
                         <td className="py-2 text-right">
                           <Badge tone={o.bookingStatus === 'booked' ? 'green' : 'amber'}>
@@ -183,7 +190,7 @@ export function ContactDetailPage() {
 
           <Card title="Offerten & Rechnungen">
             {docs.length === 0 ? (
-              <p className="py-4 text-center text-sm text-slate-400">Keine Dokumente.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">Keine Dokumente.</p>
             ) : (
               <TableWrap>
                 <table className="w-full min-w-[440px] text-sm">
@@ -191,14 +198,14 @@ export function ContactDetailPage() {
                     {docs.map((d) => (
                       <tr
                         key={d.id}
-                        className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                        className="cursor-pointer border-b border-border/70 last:border-0 transition-colors hover:bg-muted/60"
                         onClick={() => navigate(`/dokumente/${d.id}`)}
                       >
-                        <td className="py-2 font-medium text-slate-700">{d.number}</td>
-                        <td className="py-2 text-slate-500">{DOCUMENT_TYPE_LABEL[d.type]}</td>
-                        <td className="py-2 text-slate-500">{formatDate(d.date)}</td>
-                        <td className="py-2 text-right">{formatCHF(d.total)}</td>
-                        <td className="py-2 text-right text-slate-500">{d.status}</td>
+                        <td className="py-2 font-medium text-foreground">{d.number}</td>
+                        <td className="py-2 text-muted-foreground">{DOCUMENT_TYPE_LABEL[d.type]}</td>
+                        <td className="py-2 text-muted-foreground">{formatDate(d.date)}</td>
+                        <td className="py-2 text-right tabular-nums">{formatCHF(d.total)}</td>
+                        <td className="py-2 text-right text-muted-foreground">{d.status}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -213,13 +220,14 @@ export function ContactDetailPage() {
                 <table className="w-full min-w-[440px] text-sm">
                   <tbody>
                     {linkedTx.map((t) => (
-                      <tr key={t.id} className="border-b border-slate-50 last:border-0">
-                        <td className="py-2 text-slate-500">{formatDate(t.date)}</td>
+                      <tr key={t.id} className="border-b border-border/70 last:border-0">
+                        <td className="py-2 text-muted-foreground">{formatDate(t.date)}</td>
                         <td className="py-2">{t.description}</td>
                         <td
-                          className={`py-2 text-right font-medium ${
-                            t.kind === 'einnahme' ? 'text-green-600' : 'text-red-600'
-                          }`}
+                          className={cn(
+                            'py-2 text-right font-medium tabular-nums',
+                            t.kind === 'einnahme' ? 'text-success' : 'text-destructive',
+                          )}
                         >
                           {t.kind === 'ausgabe' ? '−' : '+'}
                           {formatCHF(t.amount)}

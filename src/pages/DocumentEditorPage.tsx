@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PDFViewer } from '@react-pdf/renderer'
 import { ArrowLeft, Download, Mail, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import { Button, Card, Field, Input, Modal, Select, Skeleton, Textarea } from '@/components/ui'
+import { useConfirm } from '@/hooks/useConfirm'
 import { contactName, useContacts } from '@/hooks/useContacts'
 import { useSettings } from '@/hooks/useSettings'
 import {
@@ -91,6 +92,7 @@ export function DocumentEditorPage() {
   const { id } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const confirm = useConfirm()
   const isNew = !id
 
   const { data: settings } = useSettings()
@@ -210,7 +212,18 @@ export function DocumentEditorPage() {
   }, [state, totals, id, existing])
 
   if (isLoading || !state || !settings) {
-    return <p className="text-sm text-slate-400">Laden …</p>
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-4">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      </div>
+    )
   }
 
   function patch(p: Partial<EditorState>) {
@@ -512,7 +525,7 @@ export function DocumentEditorPage() {
               )}
             </div>
             {state.recipientSnapshot.name && (
-              <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              <p className="mt-3 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                 {state.recipientSnapshot.name}
                 {state.recipientSnapshot.address.map((l) => (
                   <span key={l} className="block">
@@ -538,11 +551,11 @@ export function DocumentEditorPage() {
               {state.lineItems.map((it, idx) => (
                 <div
                   key={it.id}
-                  className="grid grid-cols-2 gap-2 rounded-lg border border-slate-100 p-2 sm:grid-cols-[1fr_70px_60px_80px_60px_28px] sm:border-0 sm:p-0"
+                  className="grid grid-cols-2 gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_70px_60px_80px_60px_28px] sm:border-0 sm:p-0"
                 >
                   <input
                     list="doc-products"
-                    className="col-span-2 rounded-lg border border-slate-300 px-2 py-1.5 text-sm sm:col-span-1"
+                    className="col-span-2 rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:col-span-1"
                     placeholder={`Position ${idx + 1} – tippen oder Artikel wählen`}
                     value={it.description}
                     onChange={(e) => {
@@ -559,13 +572,13 @@ export function DocumentEditorPage() {
                   <input
                     type="number"
                     step="0.01"
-                    className="no-spin rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="no-spin rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     placeholder="Menge"
                     value={it.quantity}
                     onChange={(e) => updateItem(it.id, { quantity: Number(e.target.value) })}
                   />
                   <input
-                    className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     placeholder="Einheit"
                     value={it.unit}
                     onChange={(e) => updateItem(it.id, { unit: e.target.value })}
@@ -573,7 +586,7 @@ export function DocumentEditorPage() {
                   <input
                     type="number"
                     step="0.05"
-                    className="no-spin rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="no-spin rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     placeholder="Preis"
                     value={it.unitPrice}
                     onChange={(e) => updateItem(it.id, { unitPrice: Number(e.target.value) })}
@@ -581,14 +594,14 @@ export function DocumentEditorPage() {
                   <input
                     type="number"
                     step="1"
-                    className="no-spin rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="no-spin rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     placeholder="Rab %"
                     value={it.discountPct}
                     onChange={(e) => updateItem(it.id, { discountPct: Number(e.target.value) })}
                   />
                   <button
                     type="button"
-                    className="flex items-center justify-center text-slate-400 hover:text-red-600"
+                    className="flex items-center justify-center text-muted-foreground hover:text-destructive"
                     onClick={() =>
                       patch({ lineItems: state.lineItems.filter((x) => x.id !== it.id) })
                     }
@@ -623,16 +636,16 @@ export function DocumentEditorPage() {
 
             <div className="mt-3 space-y-3">
               {state.discounts.map((d) => (
-                <div key={d.id} className="rounded-lg border border-slate-100 p-3">
+                <div key={d.id} className="rounded-lg border border-border p-3">
                   <div className="grid gap-2 sm:grid-cols-[1fr_130px_90px_28px]">
                     <input
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      className="rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                       placeholder="Bezeichnung (z.B. Sommeraktion)"
                       value={d.label}
                       onChange={(e) => updateDiscount(d.id, { label: e.target.value })}
                     />
                     <select
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      className="rounded-lg border border-input bg-card px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                       value={d.kind}
                       onChange={(e) =>
                         updateDiscount(d.id, {
@@ -648,7 +661,7 @@ export function DocumentEditorPage() {
                       <input
                         type="number"
                         step={d.kind === 'percent' ? '1' : '0.05'}
-                        className="no-spin rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        className="no-spin rounded-lg border border-input px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         value={d.value}
                         onChange={(e) => updateDiscount(d.id, { value: Number(e.target.value) || 0 })}
                       />
@@ -657,7 +670,7 @@ export function DocumentEditorPage() {
                     )}
                     <button
                       type="button"
-                      className="flex items-center justify-center text-slate-400 hover:text-red-600"
+                      className="flex items-center justify-center text-muted-foreground hover:text-destructive"
                       onClick={() =>
                         patch({ discounts: state.discounts.filter((x) => x.id !== d.id) })
                       }
@@ -667,7 +680,7 @@ export function DocumentEditorPage() {
                   </div>
                   {d.kind === 'percent' && (
                     <div className="mt-2 space-y-1 text-xs">
-                      <label className="flex items-center gap-2 text-slate-600">
+                      <label className="flex items-center gap-2 text-muted-foreground">
                         <input
                           type="radio"
                           checked={d.scope === 'total'}
@@ -675,7 +688,7 @@ export function DocumentEditorPage() {
                         />
                         Auf die ganze Rechnung
                       </label>
-                      <label className="flex items-center gap-2 text-slate-600">
+                      <label className="flex items-center gap-2 text-muted-foreground">
                         <input
                           type="radio"
                           checked={d.scope === 'lines'}
@@ -688,7 +701,7 @@ export function DocumentEditorPage() {
                           {state.lineItems.map((it, i) => (
                             <label
                               key={it.id}
-                              className="flex items-center gap-1 rounded border border-slate-200 px-2 py-0.5"
+                              className="flex items-center gap-1 rounded border border-border px-2 py-0.5"
                             >
                               <input
                                 type="checkbox"
@@ -752,36 +765,36 @@ export function DocumentEditorPage() {
           <Card title="Summe">
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Zwischensumme</span>
+                <span className="text-muted-foreground">Zwischensumme</span>
                 <span>{formatCHF(totals.subtotal)}</span>
               </div>
               {totals.discountLines
                 .filter((l) => !l.isShipping)
                 .map((l, i) => (
-                  <div key={i} className="flex justify-between text-slate-500">
+                  <div key={i} className="flex justify-between text-muted-foreground">
                     <span>{l.label}</span>
                     <span>−{formatCHF(l.amount)}</span>
                   </div>
                 ))}
               {totals.shipping > 0 && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Versand</span>
                   <span>{formatCHF(totals.shipping)}</span>
                 </div>
               )}
               {totals.freeShipping && totals.shipping > 0 && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Gratis Versand</span>
                   <span>−{formatCHF(totals.shipping)}</span>
                 </div>
               )}
               {Math.abs(totals.roundingDelta) >= 0.01 && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Rundung</span>
                   <span>{formatCHF(totals.roundingDelta)}</span>
                 </div>
               )}
-              <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
+              <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-semibold">
                 <span>Total</span>
                 <span>{formatCHF(totals.total)}</span>
               </div>
@@ -804,7 +817,7 @@ export function DocumentEditorPage() {
             PDF-Vorschau
           </Button>
           {isNew && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Nummer und Versand sind nach dem ersten Speichern verfügbar.
             </p>
           )}
@@ -819,7 +832,7 @@ export function DocumentEditorPage() {
             <Card title="Zahlungen">
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Bezahlt</span>
+                  <span className="text-muted-foreground">Bezahlt</span>
                   <span>{formatCHF(paid)}</span>
                 </div>
                 <div className="flex justify-between font-medium">
@@ -828,7 +841,7 @@ export function DocumentEditorPage() {
                 </div>
               </div>
               {existing.payments.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
                   {existing.payments.map((p) => (
                     <li key={p.id} className="flex justify-between">
                       <span>
@@ -851,9 +864,16 @@ export function DocumentEditorPage() {
           {!isNew && (
             <Button
               variant="ghost"
-              className="w-full text-red-600"
-              onClick={() => {
-                if (existing && confirm(`${title} löschen?`)) {
+              className="w-full text-destructive hover:text-destructive"
+              onClick={async () => {
+                if (
+                  existing &&
+                  (await confirm({
+                    title: `${title} löschen?`,
+                    destructive: true,
+                    confirmLabel: 'Löschen',
+                  }))
+                ) {
                   deleteDoc.mutate(existing.id)
                   navigate('/dokumente')
                 }
@@ -873,7 +893,7 @@ export function DocumentEditorPage() {
             </PDFViewer>
           </div>
         )}
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-muted-foreground">
           Diese Vorschau ist identisch mit dem heruntergeladenen und dem per E-Mail versendeten PDF.
         </p>
       </Modal>
@@ -904,7 +924,7 @@ export function DocumentEditorPage() {
               onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}
             />
           </Field>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={payForm.book}
@@ -972,7 +992,7 @@ export function DocumentEditorPage() {
             />
           </Field>
           {emailError && (
-            <p className="rounded-lg bg-red-50 p-2 text-sm text-red-600">{emailError}</p>
+            <p className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{emailError}</p>
           )}
           <div className="flex gap-2">
             <Button onClick={sendEmail} disabled={emailBusy || !emailForm.to}>

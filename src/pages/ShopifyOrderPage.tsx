@@ -39,7 +39,7 @@ export function ShopifyOrderPage() {
     return (
       <>
         <PageHeader title="Bestellung" />
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           {orders ? 'Bestellung nicht gefunden.' : 'Laden …'}
         </p>
         <Button variant="ghost" className="mt-3" onClick={() => navigate('/dokumente')}>
@@ -99,20 +99,20 @@ export function ShopifyOrderPage() {
             {discount.codes.length > 0 ? ` · ${discount.codes.join(', ')}` : ''}
           </Badge>
         )}
-        <span className="text-slate-400">Zahlungsstatus Shopify: {order.financialStatus}</span>
+        <span className="text-muted-foreground">Zahlungsstatus Shopify: {order.financialStatus}</span>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <Card
           title={
             <span className="flex items-center gap-2">
-              <Lock className="size-3.5 text-slate-400" />
+              <Lock className="size-3.5 text-muted-foreground" />
               Bestelldetails (nicht bearbeitbar)
             </span>
           }
         >
-          <div className="mb-3 text-sm text-slate-600">
-            <p className="font-medium text-slate-800">
+          <div className="mb-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">
               {contact ? (
                 <Link to={`/kunden/${contact.id}`} className="hover:underline">
                   {doc.recipientSnapshot.name}
@@ -124,12 +124,12 @@ export function ShopifyOrderPage() {
             {doc.recipientSnapshot.address.map((l) => (
               <p key={l}>{l}</p>
             ))}
-            <p className="mt-1 text-slate-400">Datum {formatDate(order.date)}</p>
+            <p className="mt-1 text-muted-foreground">Datum {formatDate(order.date)}</p>
           </div>
           <TableWrap>
             <table className="w-full min-w-[440px] text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
                   <th className="py-2">Bezeichnung</th>
                   <th className="py-2 text-right">Menge</th>
                   <th className="py-2 text-right">Preis</th>
@@ -138,7 +138,7 @@ export function ShopifyOrderPage() {
               </thead>
               <tbody>
                 {doc.lineItems.map((it) => (
-                  <tr key={it.id} className="border-b border-slate-50 last:border-0">
+                  <tr key={it.id} className="border-b border-border/70 last:border-0">
                     <td className="py-2">{it.description}</td>
                     <td className="py-2 text-right">
                       {formatAmount(it.quantity)} {it.unit}
@@ -154,11 +154,11 @@ export function ShopifyOrderPage() {
             <div className="w-56 space-y-1 text-sm">
               {discount.total > 0 && (
                 <>
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Zwischensumme</span>
                     <span>{formatCHF(order.goods + order.shipping + discount.total)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>
                       Rabatt{discount.codes.length > 0 ? ` (${discount.codes.join(', ')})` : ''}
                     </span>
@@ -166,12 +166,12 @@ export function ShopifyOrderPage() {
                   </div>
                 </>
               )}
-              <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold">
+              <div className="flex justify-between border-t border-border pt-2 font-semibold">
                 <span>Total</span>
                 <span>{formatCHF(order.total)}</span>
               </div>
               {paid && (
-                <div className="flex justify-between text-green-700">
+                <div className="flex justify-between text-success">
                   <span>Bezahlt</span>
                   <span>−{formatCHF(order.total)}</span>
                 </div>
@@ -181,7 +181,7 @@ export function ShopifyOrderPage() {
         </Card>
 
         <Card>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {paid
               ? 'Diese Bestellung ist bezahlt. Der Beleg dient als Zahlungsbestätigung für den Kunden – ohne QR-Einzahlungsschein.'
               : 'Diese Bestellung ist noch offen. Die Rechnung enthält den Schweizer QR-Einzahlungsschein.'}

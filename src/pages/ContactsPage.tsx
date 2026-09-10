@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Phone, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, EmptyState, Input } from '@/components/ui'
+import { Badge, Button, EmptyState, Input, Skeleton } from '@/components/ui'
 import { ContactFormModal, TYPE_LABEL } from '@/components/ContactFormModal'
 import { contactName, useContacts } from '@/hooks/useContacts'
 
@@ -44,7 +44,11 @@ export function ContactsPage() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          ))}
+        </div>
       ) : (contacts?.length ?? 0) === 0 ? (
         <EmptyState
           title="Noch keine Kontakte"
@@ -57,18 +61,18 @@ export function ContactsPage() {
             <button
               key={c.id}
               onClick={() => navigate(`/kunden/${c.id}`)}
-              className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-brand-300"
+              className="rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-colors hover:border-brand-300 active:translate-y-px"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-slate-800">{contactName(c)}</p>
+                <p className="font-semibold text-foreground">{contactName(c)}</p>
                 <Badge tone={c.type === 'lieferant' ? 'amber' : 'blue'}>{TYPE_LABEL[c.type]}</Badge>
               </div>
               {(c.address.zip || c.address.city) && (
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {c.address.line1} · {c.address.zip} {c.address.city}
                 </p>
               )}
-              <div className="mt-2 space-y-1 text-sm text-slate-500">
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                 {c.email && (
                   <p className="flex items-center gap-2">
                     <Mail className="size-3.5" /> {c.email}

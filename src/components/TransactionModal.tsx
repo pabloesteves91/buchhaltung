@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { AttachmentList } from '@/components/AttachmentList'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFiscalYears, isDateLocked } from '@/hooks/useFiscalYears'
 import {
@@ -68,6 +70,7 @@ export function TransactionModal({
 }) {
   const { data: accounts } = useAccounts()
   const { data: fiscalYears } = useFiscalYears()
+  const confirm = useConfirm()
   const createTx = useCreateTransaction()
   const updateTx = useUpdateTransaction()
   const deleteTx = useDeleteTransaction()
@@ -231,7 +234,7 @@ export function TransactionModal({
         </Field>
 
         <div>
-          <p className="mb-1 text-xs font-medium text-slate-600">Belege</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Belege</p>
           <AttachmentList
             folder={`receipts/${txId ?? 'pending'}`}
             attachments={form.attachments}
@@ -243,21 +246,21 @@ export function TransactionModal({
             }}
           />
           {!txId && (
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               Beim ersten Beleg wird die Buchung automatisch gespeichert.
             </p>
           )}
         </div>
 
         {dateLocked && (
-          <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-700">
+          <p className="rounded-lg bg-amber-100 p-2 text-sm text-amber-800">
             Datum liegt in einem abgeschlossenen Geschäftsjahr – gesperrt.
           </p>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
-            <Button onClick={save} disabled={!valid || busy}>
+            <Button onClick={save} disabled={!valid || busy} loading={busy}>
               Speichern
             </Button>
             <Button variant="ghost" onClick={onClose}>
@@ -268,12 +271,18 @@ export function TransactionModal({
             <Button
               variant="danger"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 if (isDateLocked(transaction.date, fiscalYears)) {
-                  alert('Diese Buchung liegt in einem abgeschlossenen Jahr.')
+                  toast.error('Diese Buchung liegt in einem abgeschlossenen Jahr.')
                   return
                 }
-                if (confirm('Buchung löschen?')) {
+                if (
+                  await confirm({
+                    title: 'Buchung löschen?',
+                    destructive: true,
+                    confirmLabel: 'Löschen',
+                  })
+                ) {
                   deleteTx.mutate(transaction.id)
                   onClose()
                 }

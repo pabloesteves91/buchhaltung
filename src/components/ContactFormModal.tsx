@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import { useConfirm } from '@/hooks/useConfirm'
 import {
   contactName,
   useCreateContact,
@@ -47,6 +48,7 @@ export function ContactFormModal({
   onDeleted?: () => void
 }) {
   const { data: settings } = useSettings()
+  const confirm = useConfirm()
   const createContact = useCreateContact()
   const updateContact = useUpdateContact()
   const deleteContact = useDeleteContact()
@@ -211,8 +213,14 @@ export function ContactFormModal({
               type="button"
               variant="danger"
               size="sm"
-              onClick={() => {
-                if (confirm(`Kontakt „${contactName(contact)}“ löschen?`)) {
+              onClick={async () => {
+                if (
+                  await confirm({
+                    title: `Kontakt „${contactName(contact)}“ löschen?`,
+                    destructive: true,
+                    confirmLabel: 'Löschen',
+                  })
+                ) {
                   deleteContact.mutate(contact.id)
                   onClose()
                   onDeleted?.()

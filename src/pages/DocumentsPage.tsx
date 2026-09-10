@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, EmptyState, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Skeleton, TableWrap } from '@/components/ui'
+import { DataTable, Td, Th, Tr } from '@/components/DataTable'
+import { StatCard } from '@/components/StatCard'
 import { cn } from '@/lib/cn'
 import { DOCUMENT_TYPE_LABEL, useDocuments } from '@/hooks/useDocuments'
 import { useShopifyOrders } from '@/hooks/useShopify'
@@ -113,10 +115,12 @@ export function DocumentsPage() {
       />
 
       {openInvoiceTotal > 0 && (
-        <Card className="mb-4">
-          <p className="text-xs text-slate-500">Offen (Rechnungen + unbezahlte Shopify-Bestellungen)</p>
-          <p className="mt-1 text-xl font-semibold text-slate-900">{formatCHF(openInvoiceTotal)}</p>
-        </Card>
+        <div className="mb-4">
+          <StatCard
+            label="Offen (Rechnungen + unbezahlte Shopify-Bestellungen)"
+            value={formatCHF(openInvoiceTotal)}
+          />
+        </div>
       )}
 
       <div className="mb-4 flex flex-wrap gap-1">
@@ -125,8 +129,10 @@ export function DocumentsPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              'rounded-lg px-3 py-1.5 text-sm font-medium',
-              tab === t.key ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100',
+              'rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === t.key
+                ? 'border-brand-600 bg-brand-600 text-white'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted',
             )}
           >
             {t.label}
@@ -135,7 +141,13 @@ export function DocumentsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <Card>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        </Card>
       ) : rows.length === 0 ? (
         <EmptyState
           title="Noch keine Dokumente"
@@ -147,58 +159,56 @@ export function DocumentsPage() {
       ) : (
         <Card>
           <TableWrap>
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
-                  <th className="py-2">Nummer</th>
-                  <th className="py-2">Typ</th>
-                  <th className="py-2">Kunde</th>
-                  <th className="py-2">Datum</th>
-                  <th className="py-2 text-right">Total</th>
-                  <th className="py-2 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.key}
-                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                    onClick={() => navigate(r.to)}
-                  >
-                    <td className="py-2 font-medium text-slate-700">
-                      <Link to={r.to} onClick={(e) => e.stopPropagation()}>
-                        {r.number}
+            <DataTable
+              minWidth={560}
+              head={
+                <>
+                  <Th>Nummer</Th>
+                  <Th>Typ</Th>
+                  <Th>Kunde</Th>
+                  <Th>Datum</Th>
+                  <Th align="right">Total</Th>
+                  <Th align="right">Status</Th>
+                </>
+              }
+            >
+              {rows.map((r) => (
+                <Tr key={r.key} interactive onClick={() => navigate(r.to)}>
+                  <Td className="font-medium text-foreground">
+                    <Link to={r.to} onClick={(e) => e.stopPropagation()}>
+                      {r.number}
+                    </Link>
+                  </Td>
+                  <Td>
+                    {r.isShopify ? (
+                      <Badge tone="blue">Shopify</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">{r.typeLabel}</span>
+                    )}
+                  </Td>
+                  <Td className="text-muted-foreground">
+                    {r.customerLink ? (
+                      <Link
+                        to={r.customerLink}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:underline"
+                      >
+                        {r.customer}
                       </Link>
-                    </td>
-                    <td className="py-2">
-                      {r.isShopify ? (
-                        <Badge tone="blue">Shopify</Badge>
-                      ) : (
-                        <span className="text-slate-500">{r.typeLabel}</span>
-                      )}
-                    </td>
-                    <td className="py-2 text-slate-600">
-                      {r.customerLink ? (
-                        <Link
-                          to={r.customerLink}
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:underline"
-                        >
-                          {r.customer}
-                        </Link>
-                      ) : (
-                        r.customer
-                      )}
-                    </td>
-                    <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(r.date)}</td>
-                    <td className="py-2 text-right font-medium">{formatCHF(r.total)}</td>
-                    <td className="py-2 text-right">
-                      <Badge tone={r.statusTone}>{r.statusLabel}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ) : (
+                      r.customer
+                    )}
+                  </Td>
+                  <Td className="whitespace-nowrap text-muted-foreground">{formatDate(r.date)}</Td>
+                  <Td align="right" className="font-medium">
+                    {formatCHF(r.total)}
+                  </Td>
+                  <Td align="right">
+                    <Badge tone={r.statusTone}>{r.statusLabel}</Badge>
+                  </Td>
+                </Tr>
+              ))}
+            </DataTable>
           </TableWrap>
         </Card>
       )}
