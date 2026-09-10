@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Pin, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, EmptyState, Field, Input, Modal, Textarea } from '@/components/ui'
+import { Button, Card, EmptyState, Field, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useCreateNote, useDeleteNote, useNotes, useUpdateNote } from '@/hooks/useNotes'
 import type { Note } from '@/lib/types'
 
 export function NotesPage() {
+  const confirm = useConfirm()
   const { data: notes, isLoading } = useNotes()
   const createNote = useCreateNote()
   const updateNote = useUpdateNote()
@@ -48,7 +50,11 @@ export function NotesPage() {
       />
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 w-full rounded-xl" />
+          ))}
+        </div>
       ) : (notes?.length ?? 0) === 0 ? (
         <EmptyState
           title="Noch keine Notizen"
@@ -61,24 +67,25 @@ export function NotesPage() {
             <Card key={n.id} className={cn(n.pinned && 'border-brand-300')}>
               <button className="w-full text-left" onClick={() => openEdit(n)}>
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold text-slate-800">{n.title || 'Ohne Titel'}</p>
+                  <p className="font-semibold text-foreground">{n.title || 'Ohne Titel'}</p>
                   {n.pinned && <Pin className="size-3.5 shrink-0 text-brand-500" />}
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 line-clamp-6">
+                <p className="mt-1 line-clamp-6 text-sm whitespace-pre-wrap text-muted-foreground">
                   {n.body}
                 </p>
               </button>
               <div className="mt-2 flex items-center justify-between">
                 <button
-                  className="text-xs text-slate-400 hover:text-brand-600"
+                  className="text-xs text-muted-foreground transition-colors hover:text-brand-600"
                   onClick={() => updateNote.mutate({ id: n.id, pinned: !n.pinned })}
                 >
                   {n.pinned ? 'Lösen' : 'Anpinnen'}
                 </button>
                 <button
-                  className="text-slate-300 hover:text-red-600"
-                  onClick={() => {
-                    if (confirm('Notiz löschen?')) deleteNote.mutate(n.id)
+                  className="text-muted-foreground transition-colors hover:text-destructive"
+                  onClick={async () => {
+                    if (await confirm({ title: 'Notiz löschen?', destructive: true, confirmLabel: 'Löschen' }))
+                      deleteNote.mutate(n.id)
                   }}
                 >
                   <Trash2 className="size-4" />
@@ -101,7 +108,7 @@ export function NotesPage() {
               onChange={(e) => setForm({ ...form, body: e.target.value })}
             />
           </Field>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={form.pinned}

@@ -26,14 +26,14 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+        className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-8 shadow-sm"
       >
         <div>
-          <p className="text-xl font-bold text-slate-900">nipponnites</p>
-          <p className="text-sm text-slate-500">Buchhaltung – Anmeldung</p>
+          <p className="text-xl font-bold text-foreground">nipponnites</p>
+          <p className="text-sm text-muted-foreground">Buchhaltung – Anmeldung</p>
         </div>
         <Field label="E-Mail">
           <Input
@@ -53,9 +53,11 @@ export function LoginPage() {
             required
           />
         </Field>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Anmelden …' : 'Anmelden'}
+        {error && (
+          <p className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{error}</p>
+        )}
+        <Button type="submit" className="w-full" disabled={busy} loading={busy}>
+          Anmelden
         </Button>
       </form>
     </div>

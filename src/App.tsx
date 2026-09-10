@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { Toaster } from '@/components/ui/sonner'
 import { ConfirmProvider } from '@/hooks/useConfirm'
@@ -47,23 +48,21 @@ const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
 const ClosingPage = lazyPage(() => import('@/pages/ClosingPage'), 'ClosingPage')
 const NotesPage = lazyPage(() => import('@/pages/NotesPage'), 'NotesPage')
 
-function Loading() {
+function Loading({ full }: { full?: boolean }) {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-400">
-      Laden …
+    <div
+      className={`flex items-center justify-center text-muted-foreground ${
+        full ? 'min-h-screen' : 'min-h-[50vh]'
+      }`}
+    >
+      <Loader2 className="size-6 animate-spin" />
     </div>
   )
 }
 
 function Protected() {
   const { user, loading } = useAuth()
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
-        Laden …
-      </div>
-    )
-  }
+  if (loading) return <Loading full />
   if (!user) return <Navigate to="/login" replace />
   return <AppShell />
 }

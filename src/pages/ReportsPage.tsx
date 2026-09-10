@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, EmptyState, Select, TableWrap } from '@/components/ui'
+import { StatCard } from '@/components/StatCard'
+import { cn } from '@/lib/cn'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -123,22 +125,10 @@ export function ReportsPage() {
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <Card>
-              <p className="text-xs text-slate-500">Einnahmen {year}</p>
-              <p className="mt-1 text-xl font-bold text-green-600">{formatCHF(kpi.inc)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-slate-500">Ausgaben {year}</p>
-              <p className="mt-1 text-xl font-bold text-red-600">{formatCHF(kpi.exp)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-slate-500">Ergebnis {year}</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{formatCHF(kpi.net)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-slate-500">Liquidität aktuell</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{formatCHF(liquidity)}</p>
-            </Card>
+            <StatCard label={`Einnahmen ${year}`} value={formatCHF(kpi.inc)} tone="positive" />
+            <StatCard label={`Ausgaben ${year}`} value={formatCHF(kpi.exp)} tone="negative" />
+            <StatCard label={`Ergebnis ${year}`} value={formatCHF(kpi.net)} />
+            <StatCard label="Liquidität aktuell" value={formatCHF(liquidity)} />
           </div>
 
           <Card title={`Monatsverlauf ${year}`}>
@@ -147,17 +137,17 @@ export function ReportsPage() {
                 <div key={m.month} className="flex flex-1 flex-col items-center gap-1">
                   <div className="flex h-40 w-full items-end justify-center gap-0.5">
                     <div
-                      className="w-3 rounded-t bg-green-400"
+                      className="w-3 rounded-t bg-green-500"
                       style={{ height: `${(m.income / maxMonth) * 100}%` }}
                       title={`Einnahmen ${formatCHF(m.income)}`}
                     />
                     <div
-                      className="w-3 rounded-t bg-red-400"
+                      className="w-3 rounded-t bg-red-500"
                       style={{ height: `${(m.expense / maxMonth) * 100}%` }}
                       title={`Ausgaben ${formatCHF(m.expense)}`}
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400">{MONTHS[m.month]}</span>
+                  <span className="text-[10px] text-muted-foreground">{MONTHS[m.month]}</span>
                 </div>
               ))}
             </div>
@@ -177,8 +167,8 @@ export function ReportsPage() {
               <table className="w-full text-sm">
                 <tbody>
                   {balances.map((b) => (
-                    <tr key={b.account.id} className="border-b border-slate-50 last:border-0">
-                      <td className="py-1.5 text-slate-600">
+                    <tr key={b.account.id} className="border-b border-border/70 last:border-0">
+                      <td className="py-1.5 text-muted-foreground">
                         {b.account.number} {b.account.name}
                       </td>
                       <td className="py-1.5 text-right font-medium">{formatCHF(b.balance)}</td>
@@ -191,7 +181,7 @@ export function ReportsPage() {
             <Card title="Jahresvergleich">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-slate-400">
+                  <tr className="text-left text-xs text-muted-foreground">
                     <th className="py-1.5">Jahr</th>
                     <th className="py-1.5 text-right">Einnahmen</th>
                     <th className="py-1.5 text-right">Ausgaben</th>
@@ -200,10 +190,10 @@ export function ReportsPage() {
                 </thead>
                 <tbody>
                   {yearComparison.map(([y, v]) => (
-                    <tr key={y} className="border-b border-slate-50 last:border-0">
+                    <tr key={y} className="border-b border-border/70 last:border-0">
                       <td className="py-1.5 font-medium">{y}</td>
-                      <td className="py-1.5 text-right text-green-600">{formatCHF(v.inc)}</td>
-                      <td className="py-1.5 text-right text-red-600">{formatCHF(v.exp)}</td>
+                      <td className="py-1.5 text-right text-success tabular-nums">{formatCHF(v.inc)}</td>
+                      <td className="py-1.5 text-right text-destructive tabular-nums">{formatCHF(v.exp)}</td>
                       <td className="py-1.5 text-right font-medium">{formatCHF(v.inc - v.exp)}</td>
                     </tr>
                   ))}
@@ -215,13 +205,13 @@ export function ReportsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Top-Kunden">
               {customers.length === 0 ? (
-                <p className="py-3 text-sm text-slate-400">Keine Daten.</p>
+                <p className="py-3 text-sm text-muted-foreground">Keine Daten.</p>
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
                     <tbody>
                       {customers.map((c) => (
-                        <tr key={c.name} className="border-b border-slate-50 last:border-0">
+                        <tr key={c.name} className="border-b border-border/70 last:border-0">
                           <td className="py-1.5">
                             {c.contactId ? (
                               <Link to={`/kunden/${c.contactId}`} className="hover:underline">
@@ -230,7 +220,7 @@ export function ReportsPage() {
                             ) : (
                               c.name
                             )}
-                            <span className="ml-2 text-xs text-slate-400">{c.orders}×</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{c.orders}×</span>
                           </td>
                           <td className="py-1.5 text-right font-medium">{formatCHF(c.amount)}</td>
                         </tr>
@@ -243,18 +233,18 @@ export function ReportsPage() {
 
             <Card title="Rabatte (Shopify)">
               {discounts.length === 0 ? (
-                <p className="py-3 text-sm text-slate-400">Keine Rabatte verwendet.</p>
+                <p className="py-3 text-sm text-muted-foreground">Keine Rabatte verwendet.</p>
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
                     <tbody>
                       {discounts.map((d) => (
-                        <tr key={d.code} className="border-b border-slate-50 last:border-0">
+                        <tr key={d.code} className="border-b border-border/70 last:border-0">
                           <td className="py-1.5">
                             {d.code}
-                            <span className="ml-2 text-xs text-slate-400">{d.count}×</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{d.count}×</span>
                           </td>
-                          <td className="py-1.5 text-right font-medium text-amber-600">
+                          <td className="py-1.5 text-right font-medium tabular-nums text-warning">
                             −{formatCHF(d.amount)}
                           </td>
                         </tr>
@@ -267,16 +257,16 @@ export function ReportsPage() {
 
             <Card title="Top-Produkte (Shopify)">
               {products.length === 0 ? (
-                <p className="py-3 text-sm text-slate-400">Keine Daten.</p>
+                <p className="py-3 text-sm text-muted-foreground">Keine Daten.</p>
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
                     <tbody>
                       {products.map((p) => (
-                        <tr key={p.title} className="border-b border-slate-50 last:border-0">
+                        <tr key={p.title} className="border-b border-border/70 last:border-0">
                           <td className="py-1.5">
                             {p.title}
-                            <span className="ml-2 text-xs text-slate-400">{p.quantity} Stk</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{p.quantity} Stk</span>
                           </td>
                           <td className="py-1.5 text-right font-medium">{formatCHF(p.revenue)}</td>
                         </tr>
@@ -300,22 +290,27 @@ function CategoryTable({
   lines: { number: string; name: string; amount: number }[]
   tone: 'green' | 'red'
 }) {
-  if (lines.length === 0) return <p className="py-3 text-sm text-slate-400">Keine Buchungen.</p>
+  if (lines.length === 0) return <p className="py-3 text-sm text-muted-foreground">Keine Buchungen.</p>
   const total = lines.reduce((s, l) => s + l.amount, 0)
   return (
     <table className="w-full text-sm">
       <tbody>
         {lines.map((l) => (
-          <tr key={l.number} className="border-b border-slate-50">
-            <td className="py-1.5 font-mono text-xs text-slate-400">{l.number}</td>
-            <td className="py-1.5 text-slate-600">{l.name}</td>
+          <tr key={l.number} className="border-b border-border/70">
+            <td className="py-1.5 font-mono text-xs text-muted-foreground">{l.number}</td>
+            <td className="py-1.5 text-muted-foreground">{l.name}</td>
             <td className="py-1.5 text-right font-medium">{formatCHF(l.amount)}</td>
           </tr>
         ))}
         <tr>
           <td />
           <td className="py-2 font-semibold">Total</td>
-          <td className={`py-2 text-right font-semibold ${tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>
+          <td
+            className={cn(
+              'py-2 text-right font-semibold tabular-nums',
+              tone === 'green' ? 'text-success' : 'text-destructive',
+            )}
+          >
             {formatCHF(total)}
           </td>
         </tr>

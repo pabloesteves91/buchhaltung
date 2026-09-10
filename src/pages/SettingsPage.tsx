@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Field, Input, Select, Textarea } from '@/components/ui'
 import { DEFAULT_SETTINGS, useSaveSettings, useSettings } from '@/hooks/useSettings'
@@ -12,7 +13,6 @@ export function SettingsPage() {
   const { data } = useSettings()
   const save = useSaveSettings()
   const [form, setForm] = useState<CompanySettings>(DEFAULT_SETTINGS)
-  const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -48,8 +48,7 @@ export function SettingsPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     await save.mutateAsync(form)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    toast.success('Einstellungen gespeichert.')
   }
 
   async function handleExport() {
@@ -67,11 +66,11 @@ export function SettingsPage() {
       <form onSubmit={submit} className="space-y-6">
         <Card title="Logo" >
           <div className="flex items-center gap-6">
-            <div className="flex h-24 w-40 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <div className="flex h-24 w-40 items-center justify-center rounded-lg border border-border bg-muted p-2">
               {form.logoUrl ? (
                 <img src={form.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
               ) : (
-                <span className="text-xs text-slate-400">Kein Logo</span>
+                <span className="text-xs text-muted-foreground">Kein Logo</span>
               )}
             </div>
             <div className="space-y-2">
@@ -108,7 +107,7 @@ export function SettingsPage() {
                   Entfernen
                 </Button>
               )}
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-muted-foreground">
                 PNG, JPG oder SVG. Erscheint im Menü und auf Offerten & Rechnungen.
               </p>
             </div>
@@ -310,16 +309,15 @@ export function SettingsPage() {
       </Card>
 
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={save.isPending}>
+          <Button type="submit" disabled={save.isPending} loading={save.isPending}>
             Speichern
           </Button>
-          {saved && <span className="text-sm text-green-600">Gespeichert.</span>}
         </div>
       </form>
 
 
       <Card title="Datensicherung" className="mt-6">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Lädt alle Daten (Konten, Buchungen, Kunden, Dokumente, Notizen, Shopify-Bestellungen,
           Einstellungen) als eine JSON-Datei herunter. Ohne die generierten PDFs und ohne
           Shopify-Schlüssel. Am besten regelmässig sichern.

@@ -4,6 +4,8 @@ import { pdf } from '@react-pdf/renderer'
 import { AlertTriangle, CheckCircle2, Download, Lock, Unlock } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Select } from '@/components/ui'
+import { StatCard } from '@/components/StatCard'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -25,6 +27,7 @@ export function ClosingPage() {
   const { data: orders } = useShopifyOrders()
   const { data: fiscalYears } = useFiscalYears()
   const saveFy = useSaveFiscalYear()
+  const confirm = useConfirm()
   const [busy, setBusy] = useState(false)
 
   const fy = (fiscalYears ?? []).find((f) => f.year === year)
@@ -122,7 +125,14 @@ export function ClosingPage() {
   }
 
   async function reopenYear() {
-    if (!confirm(`Geschäftsjahr ${year} wieder öffnen? Buchungen bis ${endOfYear} sind danach wieder änderbar.`)) return
+    if (
+      !(await confirm({
+        title: `Geschäftsjahr ${year} wieder öffnen?`,
+        description: `Buchungen bis ${endOfYear} sind danach wieder änderbar.`,
+        confirmLabel: 'Sperre aufheben',
+      }))
+    )
+      return
     setBusy(true)
     try {
       await saveFy.mutateAsync({
@@ -158,7 +168,7 @@ export function ClosingPage() {
       />
 
       {closed && (
-        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
           <Lock className="size-4" />
           Geschäftsjahr {year} ist abgeschlossen (am {fy?.closedAt}). Buchungen bis {endOfYear} sind
           gesperrt.
@@ -175,12 +185,12 @@ export function ClosingPage() {
               {checks.map((c) => (
                 <li key={c.label} className="flex items-center gap-2">
                   {c.ok ? (
-                    <CheckCircle2 className="size-4 shrink-0 text-green-600" />
+                    <CheckCircle2 className="size-4 shrink-0 text-success" />
                   ) : (
-                    <AlertTriangle className="size-4 shrink-0 text-amber-500" />
+                    <AlertTriangle className="size-4 shrink-0 text-warning" />
                   )}
-                  <span className="text-slate-700">{c.label}</span>
-                  <Link to={c.to} className="text-xs text-slate-400 hover:text-brand-600">
+                  <span className="text-foreground">{c.label}</span>
+                  <Link to={c.to} className="text-xs text-muted-foreground transition-colors hover:text-brand-600">
                     {c.detail}
                   </Link>
                 </li>
@@ -192,19 +202,19 @@ export function ClosingPage() {
             <table className="w-full text-sm">
               <tbody>
                 {income.map((l) => (
-                  <tr key={l.accountId} className="border-b border-slate-50">
-                    <td className="py-1.5 text-slate-600">
+                  <tr key={l.accountId} className="border-b border-border/70">
+                    <td className="py-1.5 text-muted-foreground">
                       {l.number} {l.name}
                     </td>
-                    <td className="py-1.5 text-right text-green-600">{formatCHF(l.amount)}</td>
+                    <td className="py-1.5 text-right text-success tabular-nums">{formatCHF(l.amount)}</td>
                   </tr>
                 ))}
                 {expense.map((l) => (
-                  <tr key={l.accountId} className="border-b border-slate-50">
-                    <td className="py-1.5 text-slate-600">
+                  <tr key={l.accountId} className="border-b border-border/70">
+                    <td className="py-1.5 text-muted-foreground">
                       {l.number} {l.name}
                     </td>
-                    <td className="py-1.5 text-right text-red-600">−{formatCHF(l.amount)}</td>
+                    <td className="py-1.5 text-right text-destructive tabular-nums">−{formatCHF(l.amount)}</td>
                   </tr>
                 ))}
                 <tr>
@@ -219,8 +229,8 @@ export function ClosingPage() {
             <table className="w-full text-sm">
               <tbody>
                 {assets.map((a) => (
-                  <tr key={a.number} className="border-b border-slate-50 last:border-0">
-                    <td className="py-1.5 text-slate-600">
+                  <tr key={a.number} className="border-b border-border/70 last:border-0">
+                    <td className="py-1.5 text-muted-foreground">
                       {a.number} {a.name}
                     </td>
                     <td className="py-1.5 text-right font-medium">{formatCHF(a.amount)}</td>
@@ -232,10 +242,11 @@ export function ClosingPage() {
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
-            <p className="text-xs text-slate-500">Ergebnis {year}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{formatCHF(result)}</p>
-          </Card>
+          <StatCard
+            label={`Ergebnis ${year}`}
+            value={formatCHF(result)}
+            tone={result >= 0 ? 'positive' : 'negative'}
+          />
 
           <Button variant="secondary" className="w-full" onClick={downloadReport}>
             <Download className="size-4" /> Bericht als PDF
@@ -244,18 +255,20 @@ export function ClosingPage() {
           {!closed && (
             <>
               {blocking.length > 0 && (
-                <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
+                <p className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">
                   {blocking.length} Punkt(e) offen. Du kannst trotzdem abschliessen, prüfe sie aber
                   zuerst.
                 </p>
               )}
               <Button
                 className="w-full"
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    confirm(
-                      `Geschäftsjahr ${year} abschliessen? Buchungen mit Datum bis ${endOfYear} werden gesperrt. (Später wieder aufhebbar.)`,
-                    )
+                    await confirm({
+                      title: `Geschäftsjahr ${year} abschliessen?`,
+                      description: `Buchungen mit Datum bis ${endOfYear} werden gesperrt. Später wieder aufhebbar.`,
+                      confirmLabel: 'Abschliessen',
+                    })
                   )
                     void closeYear()
                 }}
