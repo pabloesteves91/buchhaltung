@@ -1,23 +1,117 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
 
+/*
+ * Light mode only. The shadcn components ship `dark:` utilities; bind that
+ * variant to a `.dark` class that is never added, so those utilities stay
+ * inert regardless of the OS `prefers-color-scheme`.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Light mode only (single-user accounting tool, no dark mode).
+ * One calm, desaturated blue accent, locked page-wide. One radius scale.
+ * The `brand-*` scale is kept as an alias of the accent so existing utility
+ * classes (bg-brand-600, text-brand-700, …) keep working unchanged.
+ */
 @theme {
   --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #d9e6ff;
-  --color-brand-200: #bcd3ff;
-  --color-brand-300: #8eb6ff;
-  --color-brand-400: #598eff;
-  --color-brand-500: #3366ff;
-  --color-brand-600: #1f47db;
-  --color-brand-700: #1b39b0;
-  --color-brand-800: #1c338c;
-  --color-brand-900: #1c2f6f;
+    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* Calm desaturated blue (HSL ~220 41% 42% at 600) */
+  --color-brand-50: #f2f5fa;
+  --color-brand-100: #e4eaf4;
+  --color-brand-200: #c8d5e9;
+  --color-brand-300: #a3b8d8;
+  --color-brand-400: #7592bd;
+  --color-brand-500: #526fa1;
+  --color-brand-600: #3f5b96;
+  --color-brand-700: #344a7b;
+  --color-brand-800: #2e3f64;
+  --color-brand-900: #2a3752;
+
+  /* shadcn semantic tokens → Tailwind color utilities */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-xs: 0 1px 2px 0 var(--shadow-color);
+  --shadow-sm:
+    0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
+  --shadow-md:
+    0 4px 12px -2px var(--shadow-color), 0 2px 6px -3px var(--shadow-color);
+  --shadow-lg:
+    0 12px 32px -8px var(--shadow-color), 0 6px 14px -6px var(--shadow-color);
 }
 
 :root {
   color-scheme: light;
+
+  --radius: 0.625rem;
+
+  /* Hue-tinted shadow (cool blue-grey), never pure black */
+  --shadow-color: hsl(222 45% 20% / 0.1);
+
+  --background: #f6f7f9;
+  --foreground: #1a1d23;
+
+  --card: #ffffff;
+  --card-foreground: #1a1d23;
+
+  --popover: #ffffff;
+  --popover-foreground: #1a1d23;
+
+  --primary: #3f5b96;
+  --primary-foreground: #ffffff;
+
+  --secondary: #eef1f5;
+  --secondary-foreground: #2e3f64;
+
+  --muted: #f1f3f6;
+  --muted-foreground: #64748b;
+
+  --accent: #eef1f5;
+  --accent-foreground: #2e3f64;
+
+  --destructive: #c02626;
+  --destructive-foreground: #ffffff;
+
+  --success: #0a7a3d;
+  --success-foreground: #ffffff;
+
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+
+  --border: #e2e6eb;
+  --input: #d5dae1;
+  --ring: #3f5b96;
 }
 
 html,
@@ -28,10 +122,12 @@ body,
 
 body {
   margin: 0;
-  background-color: #f6f7f9;
-  color: #1a1d23;
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Hide number input spinners for currency fields */
@@ -42,4 +138,14 @@ input[type='number'].no-spin::-webkit-inner-spin-button {
 }
 input[type='number'].no-spin {
   -moz-appearance: textfield;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

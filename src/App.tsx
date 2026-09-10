@@ -2,6 +2,8 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/AppShell'
+import { Toaster } from '@/components/ui/sonner'
+import { ConfirmProvider } from '@/hooks/useConfirm'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { queryClient } from '@/lib/queryClient'
 import { LoginPage } from '@/pages/LoginPage'
@@ -70,32 +72,35 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route element={<Protected />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="journal" element={<JournalPage />} />
-                <Route path="konten" element={<AccountsPage />} />
-                <Route path="kunden" element={<ContactsPage />} />
-                <Route path="kunden/:id" element={<ContactDetailPage />} />
-                <Route path="dokumente" element={<DocumentsPage />} />
-                <Route path="dokumente/neu" element={<DocumentEditorPage />} />
-                <Route path="dokumente/:id" element={<DocumentEditorPage />} />
-                <Route path="artikel" element={<ProductsPage />} />
-                <Route path="mahnwesen" element={<DunningPage />} />
-                <Route path="shopify" element={<ShopifyPage />} />
-                <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
-                <Route path="auswertungen" element={<ReportsPage />} />
-                <Route path="abschluss" element={<ClosingPage />} />
-                <Route path="notizen" element={<NotesPage />} />
-                <Route path="einstellungen" element={<SettingsPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        <ConfirmProvider>
+          <Toaster richColors closeButton position="bottom-right" />
+          <BrowserRouter>
+            <Suspense fallback={<Loading />}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route element={<Protected />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="journal" element={<JournalPage />} />
+                  <Route path="konten" element={<AccountsPage />} />
+                  <Route path="kunden" element={<ContactsPage />} />
+                  <Route path="kunden/:id" element={<ContactDetailPage />} />
+                  <Route path="dokumente" element={<DocumentsPage />} />
+                  <Route path="dokumente/neu" element={<DocumentEditorPage />} />
+                  <Route path="dokumente/:id" element={<DocumentEditorPage />} />
+                  <Route path="artikel" element={<ProductsPage />} />
+                  <Route path="mahnwesen" element={<DunningPage />} />
+                  <Route path="shopify" element={<ShopifyPage />} />
+                  <Route path="shopify/bestellung/:orderId" element={<ShopifyOrderPage />} />
+                  <Route path="auswertungen" element={<ReportsPage />} />
+                  <Route path="abschluss" element={<ClosingPage />} />
+                  <Route path="notizen" element={<NotesPage />} />
+                  <Route path="einstellungen" element={<SettingsPage />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </ConfirmProvider>
       </AuthProvider>
     </QueryClientProvider>
   )
