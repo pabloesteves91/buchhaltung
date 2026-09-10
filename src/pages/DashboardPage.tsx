@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Card, EmptyState } from '@/components/ui'
+import { Card, EmptyState, Skeleton } from '@/components/ui'
+import { StatCard } from '@/components/StatCard'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useShopifyOrders } from '@/hooks/useShopify'
@@ -51,7 +52,7 @@ export function DashboardPage() {
           {openShopifyCount > 0 && (
             <Link
               to="/shopify"
-              className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100"
+              className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-colors hover:bg-amber-100"
             >
               <ShoppingBag className="size-4 shrink-0" />
               {openShopifyCount} Shopify-Bestellung{openShopifyCount === 1 ? '' : 'en'} noch nicht
@@ -59,25 +60,20 @@ export function DashboardPage() {
             </Link>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Card>
-              <p className="text-xs text-slate-500">Einnahmen</p>
-              <p className="mt-1 text-2xl font-bold text-green-600">{formatCHF(stats.inc)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-slate-500">Ausgaben</p>
-              <p className="mt-1 text-2xl font-bold text-red-600">{formatCHF(stats.exp)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-slate-500">Ergebnis</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{formatCHF(stats.net)}</p>
-            </Card>
+            <StatCard label="Einnahmen" value={formatCHF(stats.inc)} tone="positive" />
+            <StatCard label="Ausgaben" value={formatCHF(stats.exp)} tone="negative" />
+            <StatCard label="Ergebnis" value={formatCHF(stats.net)} />
           </div>
 
           <Card title="Einnahmen und Ausgaben pro Monat">
             {isLoading ? (
-              <p className="text-sm text-slate-400">Laden …</p>
+              <div className="flex h-40 items-end gap-2">
+                {MONTHS.map((_, i) => (
+                  <Skeleton key={i} className="flex-1" style={{ height: `${20 + ((i * 37) % 70)}%` }} />
+                ))}
+              </div>
             ) : stats.inc === 0 && stats.exp === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-400">
+              <p className="py-8 text-center text-sm text-muted-foreground">
                 Noch keine Buchungen in diesem Jahr.
               </p>
             ) : (
@@ -86,17 +82,17 @@ export function DashboardPage() {
                   <div key={i} className="flex flex-1 flex-col items-center gap-1">
                     <div className="flex h-40 w-full items-end justify-center gap-0.5">
                       <div
-                        className="w-3 rounded-t bg-green-400"
+                        className="w-3 rounded-t bg-green-500"
                         style={{ height: `${(m.inc / stats.max) * 100}%` }}
                         title={`Einnahmen ${formatCHF(m.inc)}`}
                       />
                       <div
-                        className="w-3 rounded-t bg-red-400"
+                        className="w-3 rounded-t bg-red-500"
                         style={{ height: `${(m.exp / stats.max) * 100}%` }}
                         title={`Ausgaben ${formatCHF(m.exp)}`}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400">{MONTHS[i]}</span>
+                    <span className="text-[10px] text-muted-foreground">{MONTHS[i]}</span>
                   </div>
                 ))}
               </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, EmptyState, Field, Input, Select, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, Select, Skeleton, TableWrap } from '@/components/ui'
 import {
   useAccounts,
   useCreateAccount,
@@ -12,6 +12,7 @@ import {
   KMU_KONTENRAHMEN,
   resolvedAccountType,
 } from '@/data/kmuKontenrahmen'
+import { useConfirm } from '@/hooks/useConfirm'
 import type { Account, AccountType } from '@/lib/types'
 import { Collections, createDoc } from '@/lib/db'
 import { useQueryClient } from '@tanstack/react-query'
@@ -32,6 +33,7 @@ const TYPE_TONE: Record<AccountType, 'green' | 'amber' | 'red' | 'blue'> = {
 
 export function AccountsPage() {
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const { data: accounts, isLoading } = useAccounts()
   const createAccount = useCreateAccount()
   const updateAccount = useUpdateAccount()
@@ -104,13 +106,17 @@ export function AccountsPage() {
       />
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <div className="space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
       ) : (accounts?.length ?? 0) === 0 ? (
         <EmptyState
           title="Noch kein Kontenplan"
           description="Lade den Standard-Kontenrahmen KMU. Du kannst danach jederzeit Konten ergänzen oder anpassen."
           action={
-            <Button onClick={seed} disabled={seeding}>
+            <Button onClick={seed} disabled={seeding} loading={seeding}>
               {seeding ? 'Wird geladen …' : 'Kontenrahmen KMU laden'}
             </Button>
           }
@@ -166,45 +172,51 @@ export function AccountsPage() {
           {grouped.map(([group, list]) => (
             <Card key={group} title={group}>
               <TableWrap>
-              <table className="w-full min-w-[520px] text-sm">
-                <tbody>
-                  {list.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-50 last:border-0">
-                      <td className="w-16 py-2 font-mono text-slate-500">{a.number}</td>
-                      <td className="py-2">
-                        <span className={a.active ? '' : 'text-slate-400 line-through'}>
-                          {a.name}
-                        </span>
-                      </td>
-                      <td className="w-24 py-2">
-                        <Badge tone={TYPE_TONE[a.type]}>{TYPE_LABEL[a.type]}</Badge>
-                      </td>
-                      <td className="w-40 py-2 text-right">
-                        <button
-                          className="text-xs text-slate-500 hover:text-slate-800"
-                          onClick={() =>
-                            updateAccount.mutate({ id: a.id, active: !a.active })
-                          }
-                        >
-                          {a.active ? 'Deaktivieren' : 'Aktivieren'}
-                        </button>
-                        {!a.isSystem && (
+                <table className="w-full min-w-[520px] text-sm">
+                  <tbody>
+                    {list.map((a) => (
+                      <tr key={a.id} className="border-b border-border/70 last:border-0">
+                        <td className="w-16 py-2 font-mono text-muted-foreground tabular-nums">
+                          {a.number}
+                        </td>
+                        <td className="py-2">
+                          <span className={a.active ? '' : 'text-muted-foreground line-through'}>
+                            {a.name}
+                          </span>
+                        </td>
+                        <td className="w-24 py-2">
+                          <Badge tone={TYPE_TONE[a.type]}>{TYPE_LABEL[a.type]}</Badge>
+                        </td>
+                        <td className="w-40 py-2 text-right">
                           <button
-                            className="ml-3 text-slate-400 hover:text-red-600"
-                            title="Löschen"
-                            onClick={() => {
-                              if (confirm(`Konto ${a.number} ${a.name} löschen?`))
-                                deleteAccount.mutate(a.id)
-                            }}
+                            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                            onClick={() => updateAccount.mutate({ id: a.id, active: !a.active })}
                           >
-                            <Trash2 className="inline size-4" />
+                            {a.active ? 'Deaktivieren' : 'Aktivieren'}
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          {!a.isSystem && (
+                            <button
+                              className="ml-3 text-muted-foreground transition-colors hover:text-destructive"
+                              title="Löschen"
+                              onClick={async () => {
+                                if (
+                                  await confirm({
+                                    title: `Konto ${a.number} ${a.name} löschen?`,
+                                    destructive: true,
+                                    confirmLabel: 'Löschen',
+                                  })
+                                )
+                                  deleteAccount.mutate(a.id)
+                              }}
+                            >
+                              <Trash2 className="inline size-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </TableWrap>
             </Card>
           ))}

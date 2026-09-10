@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Paperclip, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, EmptyState, Select, TableWrap } from '@/components/ui'
+import { Button, Card, EmptyState, Select, Skeleton, TableWrap } from '@/components/ui'
+import { DataTable, Td, Th, Tr } from '@/components/DataTable'
+import { StatCard } from '@/components/StatCard'
 import { TransactionModal } from '@/components/TransactionModal'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useTransactions } from '@/hooks/useTransactions'
+import { cn } from '@/lib/cn'
 import { formatCHF, formatDate } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 
@@ -54,22 +57,19 @@ export function JournalPage() {
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <p className="text-xs text-slate-500">Einnahmen {year}</p>
-          <p className="mt-1 text-xl font-semibold text-green-600">{formatCHF(total.inc)}</p>
-        </Card>
-        <Card>
-          <p className="text-xs text-slate-500">Ausgaben {year}</p>
-          <p className="mt-1 text-xl font-semibold text-red-600">{formatCHF(total.exp)}</p>
-        </Card>
-        <Card>
-          <p className="text-xs text-slate-500">Ergebnis {year}</p>
-          <p className="mt-1 text-xl font-semibold text-slate-900">{formatCHF(total.net)}</p>
-        </Card>
+        <StatCard label={`Einnahmen ${year}`} value={formatCHF(total.inc)} tone="positive" />
+        <StatCard label={`Ausgaben ${year}`} value={formatCHF(total.exp)} tone="negative" />
+        <StatCard label={`Ergebnis ${year}`} value={formatCHF(total.net)} />
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Laden …</p>
+        <Card>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        </Card>
       ) : (transactions?.length ?? 0) === 0 ? (
         <EmptyState
           title={`Keine Buchungen ${year}`}
@@ -79,53 +79,51 @@ export function JournalPage() {
       ) : (
         <Card>
           <TableWrap>
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
-                  <th className="py-2">Datum</th>
-                  <th className="py-2">Beschreibung</th>
-                  <th className="py-2">Kategorie</th>
-                  <th className="py-2">Konto</th>
-                  <th className="py-2 text-right">Betrag</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions!.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                    onClick={() => setModal({ tx: t })}
-                  >
-                    <td className="py-2 whitespace-nowrap text-slate-500">{formatDate(t.date)}</td>
-                    <td className="py-2">
-                      <span className="inline-flex items-center gap-1.5">
-                        {(t.attachments?.length ?? 0) > 0 && (
-                          <Paperclip className="size-3 text-slate-400" />
-                        )}
-                        {t.description || <span className="text-slate-400">–</span>}
-                      </span>
-                      {t.tags.length > 0 && (
-                        <span className="ml-2 text-xs text-slate-400">{t.tags.join(', ')}</span>
+            <DataTable
+              minWidth={640}
+              head={
+                <>
+                  <Th>Datum</Th>
+                  <Th>Beschreibung</Th>
+                  <Th>Kategorie</Th>
+                  <Th>Konto</Th>
+                  <Th align="right">Betrag</Th>
+                </>
+              }
+            >
+              {transactions!.map((t) => (
+                <Tr key={t.id} interactive onClick={() => setModal({ tx: t })}>
+                  <Td className="whitespace-nowrap text-muted-foreground">{formatDate(t.date)}</Td>
+                  <Td>
+                    <span className="inline-flex items-center gap-1.5">
+                      {(t.attachments?.length ?? 0) > 0 && (
+                        <Paperclip className="size-3 text-muted-foreground" />
                       )}
-                    </td>
-                    <td className="py-2 text-slate-500">{accName(t.categoryAccountId)}</td>
-                    <td className="py-2 text-slate-500">{accName(t.paymentAccountId)}</td>
-                    <td
-                      className={`py-2 text-right font-medium ${
-                        t.kind === 'einnahme'
-                          ? 'text-green-600'
-                          : t.kind === 'ausgabe'
-                            ? 'text-red-600'
-                            : 'text-slate-700'
-                      }`}
-                    >
-                      {t.kind === 'ausgabe' ? '−' : t.kind === 'einnahme' ? '+' : ''}
-                      {formatCHF(t.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      {t.description || <span className="text-muted-foreground">–</span>}
+                    </span>
+                    {t.tags.length > 0 && (
+                      <span className="ml-2 text-xs text-muted-foreground">{t.tags.join(', ')}</span>
+                    )}
+                  </Td>
+                  <Td className="text-muted-foreground">{accName(t.categoryAccountId)}</Td>
+                  <Td className="text-muted-foreground">{accName(t.paymentAccountId)}</Td>
+                  <Td
+                    align="right"
+                    className={cn(
+                      'font-medium',
+                      t.kind === 'einnahme'
+                        ? 'text-success'
+                        : t.kind === 'ausgabe'
+                          ? 'text-destructive'
+                          : 'text-foreground',
+                    )}
+                  >
+                    {t.kind === 'ausgabe' ? '−' : t.kind === 'einnahme' ? '+' : ''}
+                    {formatCHF(t.amount)}
+                  </Td>
+                </Tr>
+              ))}
+            </DataTable>
           </TableWrap>
         </Card>
       )}
