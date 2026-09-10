@@ -30,7 +30,7 @@ export function JournalPage() {
 
   const accName = (id: string) => {
     const a = accounts?.find((x) => x.id === id)
-    return a ? `${a.number} ${a.name}` : '—'
+    return a ? `${a.number} ${a.name}` : '–'
   }
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
