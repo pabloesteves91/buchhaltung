@@ -55,6 +55,9 @@ export function SettingsPage() {
     setExporting(true)
     try {
       downloadBlob(`buchhaltung-backup-${todayIso()}.json`, await exportAllData())
+      const next = { ...form, lastBackupAt: todayIso() }
+      setForm(next)
+      await save.mutateAsync(next)
     } finally {
       setExporting(false)
     }
@@ -197,6 +200,17 @@ export function SettingsPage() {
                   </option>
                 ))}
               </Select>
+            </Field>
+            <Field
+              label="MWST-Schwelle CHF"
+              hint="Ab diesem Jahresumsatz warnt der Health-Check auf der Übersicht (aktuell CHF 100'000 gemäss Gesetz – keine Rechtsberatung)."
+            >
+              <Input
+                type="number"
+                step="1000"
+                value={form.vatThresholdChf ?? 100_000}
+                onChange={(e) => set('vatThresholdChf', Number(e.target.value) || 0)}
+              />
             </Field>
           </div>
         </Card>

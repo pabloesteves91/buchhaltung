@@ -285,6 +285,12 @@ export interface CompanySettings {
     /** Reminder body text per level. */
     texts: [string, string, string]
   }
+  /** Jahresumsatz-Schwelle für den MWST-Pflicht-Hinweis (CHF). Default 100'000. */
+  vatThresholdChf?: number
+  /** ISO date of the last "Alle Daten exportieren" click, for the Health-Check. */
+  lastBackupAt?: IsoDate
+  /** Sichtbare Dashboard-Widgets + Reihenfolge. Fehlt das Feld, sind alle sichtbar. */
+  dashboardWidgets?: string[]
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
