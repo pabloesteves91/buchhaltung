@@ -54,6 +54,29 @@ export async function bookShopifyOrderLocal(
     )
   }
 
+  // Wareneinsatz (Printful-Fulfillment-Kosten), falls für diese Bestellung
+  // bereits importiert (siehe usePrintful.ts) und Konten hinterlegt sind.
+  const cogsTotal = round2(order.cogs?.total ?? 0)
+  if (cogsTotal > 0 && acc.cogsExpenseId && acc.cogsPayableId) {
+    txIds.push(
+      await createDoc(Collections.transactions, {
+        date: order.date,
+        fiscalYear: Number(order.date.slice(0, 4)),
+        kind: 'ausgabe',
+        description: `Printful Wareneinsatz ${order.orderName}`,
+        amount: cogsTotal,
+        categoryAccountId: acc.cogsExpenseId,
+        paymentAccountId: acc.cogsPayableId,
+        attachments: [],
+        tags: ['Shopify', 'Printful'],
+        source: 'shopify',
+        shopifyOrderId: order.orderId,
+        reconciled: true,
+        locked: false,
+      }),
+    )
+  }
+
   await patchDoc(Collections.shopifyOrders, order.id, {
     bookingStatus: 'booked',
     bookedTransactionIds: txIds,

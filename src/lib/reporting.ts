@@ -152,6 +152,38 @@ export function reactivationCandidates(
   return result.sort((a, b) => b.daysSince - a.daysSince)
 }
 
+export interface OrderMargin {
+  revenue: number
+  cogs: number
+  margin: number
+  marginPct: number
+  /** Verbuchte Bestellungen ohne hinterlegte Printful-Kosten (Marge fehlt hier). */
+  ordersWithoutCogs: number
+}
+
+/** Umsatz, Wareneinsatz und Marge über alle nicht stornierten Bestellungen. */
+export function orderMargin(orders: ShopifyOrderDoc[]): OrderMargin {
+  let revenue = 0
+  let cogs = 0
+  let ordersWithoutCogs = 0
+  for (const o of orders) {
+    if (o.bookingStatus === 'cancelled') continue
+    revenue += o.total
+    if (o.cogs) cogs += o.cogs.total
+    else if (o.bookingStatus === 'booked') ordersWithoutCogs++
+  }
+  revenue = round2(revenue)
+  cogs = round2(cogs)
+  const margin = round2(revenue - cogs)
+  return {
+    revenue,
+    cogs,
+    margin,
+    marginPct: revenue > 0 ? round2((margin / revenue) * 100) : 0,
+    ordersWithoutCogs,
+  }
+}
+
 export interface ProductLine {
   title: string
   quantity: number

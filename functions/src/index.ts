@@ -30,6 +30,8 @@ export {
   shopifyWebhook,
 } from './shopify.js'
 
+export { testPrintfulConnection, importPrintfulCosts } from './printful.js'
+
 /* -------------------------------------------------------------------------- */
 /*  Email: send a generated document PDF via Resend                            */
 /* -------------------------------------------------------------------------- */

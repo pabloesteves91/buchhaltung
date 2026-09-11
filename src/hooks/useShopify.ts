@@ -50,6 +50,10 @@ export interface ShopifyOrderDoc {
   pendingRefund?: number
   source?: 'shopify' | 'csv'
   lineItems: { title: string; quantity: number; price: number }[]
+  /** Printful-Fulfillment-Kosten für diese Bestellung (Bestellungs-Ebene, nicht
+   *  pro Zeile – Shopify-Bestellungen speichern keine SKU/Varianten-ID für eine
+   *  zuverlässige Zeilen-Zuordnung). */
+  cogs?: { product: number; shipping: number; total: number; source: 'printful' | 'manual' }
 }
 
 export interface ShopifyPayoutDoc {
@@ -81,6 +85,11 @@ export interface ShopifyConfig {
     moneyId?: string
     refundId?: string
     bankId?: string
+    /** Wareneinsatz-Aufwandskonto für Printful-Kosten (Vorschlag: 4200). */
+    cogsExpenseId?: string
+    /** Kreditoren-/Verbindlichkeitskonto, gegen das der Wareneinsatz gebucht
+     *  wird (Vorschlag: 2000). */
+    cogsPayableId?: string
   }
   connected?: boolean
   shopName?: string
@@ -130,7 +139,7 @@ export function useShopifyPayouts() {
   })
 }
 
-function callable<TIn, TOut>(name: string) {
+export function callable<TIn, TOut>(name: string) {
   const fn = httpsCallable<TIn, TOut>(functions, name)
   return async (data: TIn) => (await fn(data)).data
 }

@@ -16,6 +16,7 @@ import {
   discountUsage,
   downloadCsv,
   monthlyBuckets,
+  orderMargin,
   reactivationCandidates,
   toCsv,
   topCustomers,
@@ -91,6 +92,7 @@ export function ReportsPage() {
     () => reactivationCandidates(orders ?? [], docs ?? []).slice(0, 10),
     [orders, docs],
   )
+  const margin = useMemo(() => orderMargin(orders ?? []), [orders])
 
   // Basis-Kennzahlen für den Rabattaktions-Simulator: Ø Bestellwert aus den
   // Shopify-Bestellungen, Ø Marge % aus den Artikeln mit hinterlegtem EK.
@@ -197,6 +199,27 @@ export function ReportsPage() {
               ))}
             </div>
           </Card>
+
+          {(orders?.length ?? 0) > 0 && margin.cogs > 0 && (
+            <Card title="Marge (Shopify, mit Printful-Kosten)">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard label="Umsatz" value={formatCHF(margin.revenue)} />
+                <StatCard label="Wareneinsatz" value={formatCHF(margin.cogs)} tone="negative" />
+                <StatCard
+                  label="Marge"
+                  value={`${formatCHF(margin.margin)} (${margin.marginPct}%)`}
+                  tone="positive"
+                />
+              </div>
+              {margin.ordersWithoutCogs > 0 && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {margin.ordersWithoutCogs} verbuchte Bestellung
+                  {margin.ordersWithoutCogs === 1 ? '' : 'en'} ohne Printful-Kosten – Marge dafür
+                  fehlt in dieser Auswertung.
+                </p>
+              )}
+            </Card>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Ertrag nach Konto">

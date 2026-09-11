@@ -20,7 +20,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 const REGION = 'europe-west6'
 
 /** Auth guard + turn any thrown error into a readable HttpsError for the client. */
-function guard<T, R>(handler: (req: CallableRequest<T>) => Promise<R>) {
+export function guard<T, R>(handler: (req: CallableRequest<T>) => Promise<R>) {
   return async (req: CallableRequest<T>): Promise<R> => {
     if (!req.auth) throw new HttpsError('unauthenticated', 'Login required')
     try {
@@ -167,7 +167,7 @@ function isoDate(value: string | undefined): string {
   return (value ?? new Date().toISOString()).slice(0, 10)
 }
 
-function num(value: unknown): number {
+export function num(value: unknown): number {
   const n = Number(value)
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0
 }

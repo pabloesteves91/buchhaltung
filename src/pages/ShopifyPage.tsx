@@ -18,6 +18,7 @@ import {
   type ShopifyBookingStatus,
 } from '@/hooks/useShopify'
 import { bookShopifyPayoutLocal, unbookShopifyPayoutLocal } from '@/lib/shopifyBooking'
+import { usePrintfulActions, usePrintfulConfig, useSavePrintfulConfig } from '@/hooks/usePrintful'
 import { formatCHF, formatDate } from '@/lib/format'
 
 function friendlyError(e: unknown): string {
@@ -126,6 +127,7 @@ export function ShopifyPage() {
   const revenueAccounts = (accounts ?? []).filter((a) => a.type === 'ertrag' && a.active)
   const moneyAccounts = (accounts ?? []).filter((a) => a.type === 'aktiven' && a.active)
   const expenseAccounts = (accounts ?? []).filter((a) => a.type === 'aufwand' && a.active)
+  const liabilityAccounts = (accounts ?? []).filter((a) => a.type === 'passiven' && a.active)
 
   const filtered = useMemo(() => {
     const list = orders ?? []
@@ -139,7 +141,15 @@ export function ShopifyPage() {
 
   function accountField(
     label: string,
-    key: 'revenueId' | 'shippingId' | 'feeId' | 'moneyId' | 'refundId' | 'bankId',
+    key:
+      | 'revenueId'
+      | 'shippingId'
+      | 'feeId'
+      | 'moneyId'
+      | 'refundId'
+      | 'bankId'
+      | 'cogsExpenseId'
+      | 'cogsPayableId',
     list: typeof revenueAccounts,
   ) {
     return (
@@ -310,6 +320,8 @@ export function ShopifyPage() {
 
       {(isConfigured || (orders?.length ?? 0) > 0) && (
         <>
+          <PrintfulCard />
+
           {/* Account mapping */}
           <Card title="Kontozuordnung" className="mb-6">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -319,6 +331,8 @@ export function ShopifyPage() {
               {accountField('Rückerstattungen', 'refundId', revenueAccounts)}
               {accountField('Shopify-Gebühren', 'feeId', expenseAccounts)}
               {accountField('Bankkonto (Auszahlungsziel)', 'bankId', moneyAccounts)}
+              {accountField('Wareneinsatz (Printful)', 'cogsExpenseId', expenseAccounts)}
+              {accountField('Kreditoren (Printful)', 'cogsPayableId', liabilityAccounts)}
             </div>
             <div className="mt-4 space-y-2">
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -610,5 +624,110 @@ export function ShopifyPage() {
         </>
       )}
     </>
+  )
+}
+
+/** Printful-Anbindung: API-Key, Verbindungstest, Kosten-Import (COGS). */
+function PrintfulCard() {
+  const { config, loading } = usePrintfulConfig()
+  const saveConfig = useSavePrintfulConfig()
+  const { test, importCosts } = usePrintfulActions()
+  const [apiKey, setApiKey] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const cfg = config ?? {}
+  const isConfigured = Boolean(cfg.apiKey)
+
+  return (
+    <Card title="Printful" className="mb-6">
+      {loading ? (
+        <Skeleton className="h-9 w-full" />
+      ) : isConfigured ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <Badge tone={cfg.connected ? 'green' : 'amber'}>
+              {cfg.connected ? (
+                <>
+                  <CheckCircle2 className="mr-1 inline size-3.5" /> {cfg.storeName || 'Verbunden'}
+                </>
+              ) : (
+                'Nicht getestet'
+              )}
+            </Badge>
+            {cfg.lastImportAt && (
+              <span className="text-muted-foreground">
+                Letzter Kosten-Import: {formatDate(cfg.lastImportAt.slice(0, 10))}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={test.isPending}
+              loading={test.isPending}
+              onClick={async () => {
+                setMsg(null)
+                try {
+                  const r = await test.mutateAsync({})
+                  setMsg(`Verbunden mit „${r.name}“.`)
+                } catch (e) {
+                  setMsg(friendlyError(e))
+                }
+              }}
+            >
+              Verbindung testen
+            </Button>
+            <Button
+              disabled={importCosts.isPending}
+              loading={importCosts.isPending}
+              onClick={async () => {
+                setMsg(null)
+                try {
+                  const r = await importCosts.mutateAsync({ sinceDays: 90 })
+                  setMsg(`${r.updated} Bestellungen aktualisiert, ${r.skipped} ohne Treffer.`)
+                } catch (e) {
+                  setMsg(friendlyError(e))
+                }
+              }}
+            >
+              Kosten importieren
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => saveConfig.mutate({ apiKey: '', connected: false })}
+            >
+              Zugang ändern
+            </Button>
+          </div>
+          {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            API-Token aus dem Printful-Dashboard unter <em>Einstellungen → API</em>. Wird für den
+            Wareneinsatz (Printful-Fulfillment-Kosten) pro Bestellung verwendet, siehe
+            Kontozuordnung unten.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="API-Key">
+              <Input
+                type="password"
+                placeholder="•••••••••••••••••"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </Field>
+          </div>
+          <Button
+            onClick={() => saveConfig.mutate({ apiKey: apiKey.trim() })}
+            disabled={!apiKey.trim()}
+          >
+            Speichern
+          </Button>
+        </div>
+      )}
+    </Card>
   )
 }
