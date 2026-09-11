@@ -152,11 +152,11 @@ export function AppShell() {
   useEffect(() => setOpen(false), [location.pathname])
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:block">
+      {/* Desktop sidebar — fixed height, own scroll; only <main> scrolls with the page. */}
+      <aside className="hidden w-60 shrink-0 overflow-y-auto border-r border-border bg-card lg:block">
         <SidebarContent onSearch={() => setPaletteOpen(true)} />
       </aside>
 
@@ -187,9 +187,9 @@ export function AppShell() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card px-4 lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:hidden">
           <button
             onClick={() => setOpen(true)}
             className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted"
@@ -211,7 +211,7 @@ export function AppShell() {
           </button>
         </header>
 
-        <main className="flex-1 overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
             <Outlet />
           </div>

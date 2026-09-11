@@ -138,7 +138,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="block text-xs font-medium text-muted-foreground">{label}</span>
       {children}
       {error ? (
         <span className="block text-xs font-medium text-destructive">{error}</span>
