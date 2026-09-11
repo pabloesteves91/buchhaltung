@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Paperclip, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge, Button, Card, EmptyState, Select, Skeleton, TableWrap } from '@/components/ui'
@@ -109,6 +110,15 @@ export function JournalPage() {
                           </Badge>
                         ))}
                       </span>
+                    )}
+                    {t.shopifyOrderId && (
+                      <Link
+                        to={`/shopify/bestellung/${t.shopifyOrderId}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-2 text-xs text-brand-600 hover:underline"
+                      >
+                        Bestellung ansehen
+                      </Link>
                     )}
                   </Td>
                   <Td className="text-muted-foreground">{accName(t.categoryAccountId)}</Td>
