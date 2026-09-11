@@ -11,7 +11,7 @@ import {
   useUpdateProduct,
 } from '@/hooks/useProducts'
 import { useShopifyActions } from '@/hooks/useShopify'
-import { round2 } from '@/lib/format'
+import { formatCHF, round2 } from '@/lib/format'
 
 export function ProductsPage() {
   const confirm = useConfirm()
@@ -23,7 +23,7 @@ export function ProductsPage() {
 
   const [search, setSearch] = useState('')
   const [showNew, setShowNew] = useState(false)
-  const [form, setForm] = useState({ title: '', sku: '', price: '', unit: 'Stk' })
+  const [form, setForm] = useState({ title: '', sku: '', price: '', cost: '', unit: 'Stk' })
   const [msg, setMsg] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
@@ -43,10 +43,11 @@ export function ProductsPage() {
       title: form.title.trim(),
       sku: form.sku.trim() || undefined,
       price: round2(Number(form.price)),
+      cost: form.cost ? round2(Number(form.cost)) : undefined,
       unit: form.unit.trim() || 'Stk',
       active: true,
     })
-    setForm({ title: '', sku: '', price: '', unit: 'Stk' })
+    setForm({ title: '', sku: '', price: '', cost: '', unit: 'Stk' })
     setShowNew(false)
   }
 
@@ -105,10 +106,19 @@ export function ProductsPage() {
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                 />
               </Field>
-              <Field label="Einheit">
-                <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+              <Field label="EK CHF" hint="Für die Marge-Spalte, optional.">
+                <Input
+                  type="number"
+                  step="0.05"
+                  className="no-spin"
+                  value={form.cost}
+                  onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                />
               </Field>
             </div>
+            <Field label="Einheit">
+              <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+            </Field>
             <div className="sm:col-span-4 flex gap-2">
               <Button type="submit" disabled={createProduct.isPending} loading={createProduct.isPending}>
                 Speichern
@@ -152,12 +162,14 @@ export function ProductsPage() {
       ) : (
         <Card>
           <TableWrap>
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
                   <th className="py-2">Bezeichnung</th>
                   <th className="py-2">SKU</th>
                   <th className="py-2 w-28 text-right">Preis CHF</th>
+                  <th className="py-2 w-24 text-right">EK CHF</th>
+                  <th className="py-2 w-28 text-right">Marge</th>
                   <th className="py-2 w-20">Einheit</th>
                   <th className="py-2">Quelle</th>
                   <th />
@@ -172,7 +184,18 @@ export function ProductsPage() {
                       !p.active && 'opacity-40',
                     )}
                   >
-                    <td className="py-1.5">{p.title}</td>
+                    <td className="py-1.5">
+                      <span className="flex items-center gap-2">
+                        {p.imageUrl && (
+                          <img
+                            src={p.imageUrl}
+                            alt=""
+                            className="size-8 shrink-0 rounded object-cover"
+                          />
+                        )}
+                        {p.title}
+                      </span>
+                    </td>
                     <td className="py-1.5 text-muted-foreground">{p.sku || '–'}</td>
                     <td className="py-1.5 text-right">
                       <input
@@ -185,6 +208,36 @@ export function ProductsPage() {
                           if (v !== p.price) updateProduct.mutate({ id: p.id, price: v })
                         }}
                       />
+                    </td>
+                    <td className="py-1.5 text-right">
+                      <input
+                        type="number"
+                        step="0.05"
+                        defaultValue={p.cost ?? ''}
+                        placeholder="–"
+                        className="no-spin w-20 rounded border border-input px-2 py-1 text-right outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+                        onBlur={(e) => {
+                          const v = e.target.value ? round2(Number(e.target.value)) : undefined
+                          if (v !== p.cost) updateProduct.mutate({ id: p.id, cost: v })
+                        }}
+                      />
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {p.cost != null ? (
+                        <span
+                          className={cn(
+                            'font-medium',
+                            p.price - p.cost >= 0 ? 'text-success' : 'text-destructive',
+                          )}
+                        >
+                          {formatCHF(p.price - p.cost)}
+                          <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            ({p.price > 0 ? Math.round(((p.price - p.cost) / p.price) * 100) : 0}%)
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">–</span>
+                      )}
                     </td>
                     <td className="py-1.5">
                       <input

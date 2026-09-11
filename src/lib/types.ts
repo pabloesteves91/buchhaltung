@@ -213,10 +213,14 @@ export interface Product {
   title: string
   sku?: string
   price: number
+  /** Einkaufspreis/Herstellkosten CHF – Basis für die Marge-Spalte im Artikelstamm. */
+  cost?: number
   unit: string
   active: boolean
   shopifyProductId?: string
   shopifyVariantId?: string
+  /** Produktbild-URL, aus dem Shopify-Import übernommen. */
+  imageUrl?: string
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

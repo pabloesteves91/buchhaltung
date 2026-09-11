@@ -452,6 +452,7 @@ interface ShopifyProduct {
   id: number
   title: string
   status: string
+  image?: { src: string }
   variants?: { id: number; title: string; price: string; sku?: string }[]
 }
 
@@ -492,6 +493,7 @@ export const importShopifyProducts = onCall(
               title: isDefault ? p.title : `${p.title} – ${v.title}`,
               sku: v.sku ?? '',
               price: num(v.price),
+              imageUrl: p.image?.src,
               unit: 'Stk',
               active: p.status === 'active',
               updatedAt: FieldValue.serverTimestamp(),
