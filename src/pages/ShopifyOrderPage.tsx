@@ -176,6 +176,18 @@ export function ShopifyOrderPage() {
                   <span>−{formatCHF(order.total)}</span>
                 </div>
               )}
+              {order.cogs && (
+                <>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Printful-Kosten{order.cogs.source === 'manual' ? ' (manuell)' : ''}</span>
+                    <span>−{formatCHF(order.cogs.total)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-2 font-semibold">
+                    <span>Marge</span>
+                    <span>{formatCHF(order.total - order.cogs.total)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </Card>

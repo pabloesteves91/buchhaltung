@@ -510,6 +510,7 @@ export function ShopifyPage() {
                       <th className="py-2">Datum</th>
                       <th className="py-2">Kunde</th>
                       <th className="py-2 text-right">Betrag</th>
+                      <th className="py-2 text-right">Printful-Kosten</th>
                       <th className="py-2 text-right">Status</th>
                       <th />
                     </tr>
@@ -531,6 +532,9 @@ export function ShopifyPage() {
                           )}
                         </td>
                         <td className="py-2 text-right">{formatCHF(o.total)}</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {o.cogs ? `−${formatCHF(o.cogs.total)}` : '–'}
+                        </td>
                         <td className="py-2 text-right">
                           <Badge tone={SHOPIFY_STATUS[o.bookingStatus].tone}>
                             {SHOPIFY_STATUS[o.bookingStatus].label}

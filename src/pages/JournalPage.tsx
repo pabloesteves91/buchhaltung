@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Paperclip, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, EmptyState, Select, Skeleton, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, Select, Skeleton, TableWrap } from '@/components/ui'
 import { DataTable, Td, Th, Tr } from '@/components/DataTable'
 import { StatCard } from '@/components/StatCard'
 import { TransactionModal } from '@/components/TransactionModal'
@@ -102,7 +102,13 @@ export function JournalPage() {
                       {t.description || <span className="text-muted-foreground">–</span>}
                     </span>
                     {t.tags.length > 0 && (
-                      <span className="ml-2 text-xs text-muted-foreground">{t.tags.join(', ')}</span>
+                      <span className="ml-2 inline-flex gap-1 align-middle">
+                        {t.tags.map((tag) => (
+                          <Badge key={tag} tone={tag === 'Printful' ? 'amber' : 'slate'}>
+                            {tag}
+                          </Badge>
+                        ))}
+                      </span>
                     )}
                   </Td>
                   <Td className="text-muted-foreground">{accName(t.categoryAccountId)}</Td>
