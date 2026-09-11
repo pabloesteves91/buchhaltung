@@ -1,6 +1,6 @@
 import type { Account, BusinessDocument, Transaction } from './types'
 import type { ShopifyOrderDoc } from '@/hooks/useShopify'
-import { round2 } from './format'
+import { round2, todayIso } from './format'
 
 export interface MonthBucket {
   month: number
@@ -101,6 +101,55 @@ export function topCustomers(
     add(d.contactId || d.recipientSnapshot.name, d.recipientSnapshot.name, d.total, d.contactId)
   }
   return [...map.values()].sort((a, b) => b.amount - a.amount)
+}
+
+export interface ReactivationCandidate {
+  name: string
+  contactId?: string
+  lastOrderDate: string
+  daysSince: number
+  totalOrders: number
+}
+
+/** Customers/contacts with at least one past order/invoice whose most recent
+ *  one is older than `minDaysSince` – win-back candidates, sorted longest-gone
+ *  first. Mirrors `topCustomers`'s aggregation-by-contact-key. */
+export function reactivationCandidates(
+  orders: ShopifyOrderDoc[],
+  documents: BusinessDocument[],
+  minDaysSince = 90,
+  today = todayIso(),
+): ReactivationCandidate[] {
+  const map = new Map<string, { name: string; contactId?: string; lastDate: string; count: number }>()
+  const consider = (key: string, name: string, date: string, contactId?: string) => {
+    const cur = map.get(key) ?? { name, contactId, lastDate: date, count: 0 }
+    cur.count += 1
+    if (date > cur.lastDate) cur.lastDate = date
+    if (contactId) cur.contactId = contactId
+    map.set(key, cur)
+  }
+  for (const o of orders) {
+    if (o.bookingStatus === 'cancelled') continue
+    consider(o.contactId || o.customerEmail || o.customerName, o.customerName, o.date, o.contactId ?? undefined)
+  }
+  for (const d of documents) {
+    if (d.type !== 'rechnung' || d.status === 'storniert') continue
+    consider(d.contactId || d.recipientSnapshot.name, d.recipientSnapshot.name, d.date, d.contactId)
+  }
+  const result: ReactivationCandidate[] = []
+  for (const v of map.values()) {
+    const daysSince = Math.round((Date.parse(today) - Date.parse(v.lastDate)) / 86_400_000)
+    if (daysSince >= minDaysSince) {
+      result.push({
+        name: v.name,
+        contactId: v.contactId,
+        lastOrderDate: v.lastDate,
+        daysSince,
+        totalOrders: v.count,
+      })
+    }
+  }
+  return result.sort((a, b) => b.daysSince - a.daysSince)
 }
 
 export interface ProductLine {

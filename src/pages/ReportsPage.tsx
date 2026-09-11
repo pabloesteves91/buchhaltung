@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, EmptyState, Select, TableWrap } from '@/components/ui'
+import { Button, Card, EmptyState, Field, Input, Select, TableWrap } from '@/components/ui'
 import { StatCard } from '@/components/StatCard'
 import { cn } from '@/lib/cn'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useDocuments } from '@/hooks/useDocuments'
+import { useProducts } from '@/hooks/useProducts'
 import { useShopifyOrders } from '@/hooks/useShopify'
 import {
   accountBalances,
@@ -15,6 +16,7 @@ import {
   discountUsage,
   downloadCsv,
   monthlyBuckets,
+  reactivationCandidates,
   toCsv,
   topCustomers,
   topProducts,
@@ -31,6 +33,7 @@ export function ReportsPage() {
   const { data: accounts } = useAccounts()
   const { data: docs } = useDocuments()
   const { data: orders } = useShopifyOrders()
+  const { data: articles } = useProducts()
 
   const yearTx = useMemo(
     () => (allTx ?? []).filter((t) => t.fiscalYear === year),
@@ -84,6 +87,48 @@ export function ReportsPage() {
     () => discountUsage(orders ?? [], orderDiscount).slice(0, 10),
     [orders],
   )
+  const reactivation = useMemo(
+    () => reactivationCandidates(orders ?? [], docs ?? []).slice(0, 10),
+    [orders, docs],
+  )
+
+  // Basis-Kennzahlen für den Rabattaktions-Simulator: Ø Bestellwert aus den
+  // Shopify-Bestellungen, Ø Marge % aus den Artikeln mit hinterlegtem EK.
+  const activeOrders = (orders ?? []).filter((o) => o.bookingStatus !== 'cancelled')
+  const avgOrderValue =
+    activeOrders.length > 0
+      ? activeOrders.reduce((s, o) => s + o.total, 0) / activeOrders.length
+      : 0
+  const costedArticles = (articles ?? []).filter((p) => p.cost != null && p.price > 0)
+  const avgMarginPctFromArticles =
+    costedArticles.length > 0
+      ? (costedArticles.reduce((s, p) => s + (p.price - (p.cost ?? 0)) / p.price, 0) /
+          costedArticles.length) *
+        100
+      : null
+
+  const [discountPct, setDiscountPct] = useState(10)
+  const [expectedOrders, setExpectedOrders] = useState(10)
+  const [marginPctInput, setMarginPctInput] = useState('')
+  const marginPct = marginPctInput !== '' ? Number(marginPctInput) : (avgMarginPctFromArticles ?? 30)
+
+  const sim = useMemo(() => {
+    const cost = avgOrderValue * (1 - marginPct / 100)
+    const normalMargin = avgOrderValue - cost
+    const discountedPrice = avgOrderValue * (1 - discountPct / 100)
+    const discountedMargin = discountedPrice - cost
+    const totalMarginNormal = normalMargin * expectedOrders
+    const totalMarginDiscounted = discountedMargin * expectedOrders
+    const breakEvenOrders = discountedMargin > 0 ? totalMarginNormal / discountedMargin : null
+    return {
+      discountedPrice,
+      normalMargin,
+      discountedMargin,
+      totalMarginNormal,
+      totalMarginDiscounted,
+      extraOrdersNeeded: breakEvenOrders != null ? Math.max(0, breakEvenOrders - expectedOrders) : null,
+    }
+  }, [avgOrderValue, marginPct, discountPct, expectedOrders])
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
   const hasData = (allTx?.length ?? 0) > 0 || (orders?.length ?? 0) > 0
@@ -276,7 +321,106 @@ export function ReportsPage() {
                 </TableWrap>
               )}
             </Card>
+
+            <Card title="Kunden-Reaktivierung">
+              {reactivation.length === 0 ? (
+                <EmptyState compact title="Keine Kandidaten" description="Alle Kunden haben kürzlich bestellt." />
+              ) : (
+                <TableWrap>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {reactivation.map((r) => (
+                        <tr key={r.name} className="border-b border-border/70 last:border-0">
+                          <td className="py-1.5">
+                            {r.contactId ? (
+                              <Link to={`/kunden/${r.contactId}`} className="hover:underline">
+                                {r.name}
+                              </Link>
+                            ) : (
+                              r.name
+                            )}
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {r.totalOrders}× bisher
+                            </span>
+                          </td>
+                          <td className="py-1.5 text-right text-muted-foreground tabular-nums">
+                            vor {r.daysSince} Tagen
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableWrap>
+              )}
+            </Card>
           </div>
+
+          <Card title="Rabattaktion simulieren">
+            <p className="mb-3 text-xs text-muted-foreground">
+              Grobe Schätzung auf Basis von Durchschnittswerten, keine Prognose.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Field label="Rabatt %">
+                <Input
+                  type="number"
+                  step="1"
+                  className="no-spin"
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(Number(e.target.value) || 0)}
+                />
+              </Field>
+              <Field label="Bestellungen (Aktion)">
+                <Input
+                  type="number"
+                  step="1"
+                  className="no-spin"
+                  value={expectedOrders}
+                  onChange={(e) => setExpectedOrders(Number(e.target.value) || 0)}
+                />
+              </Field>
+              <Field
+                label="Ø Marge %"
+                hint={
+                  avgMarginPctFromArticles != null
+                    ? `Aus Artikelstamm: ${avgMarginPctFromArticles.toFixed(0)}%`
+                    : 'Kein EK im Artikelstamm hinterlegt – schätzen.'
+                }
+              >
+                <Input
+                  type="number"
+                  step="1"
+                  className="no-spin"
+                  placeholder={String(Math.round(avgMarginPctFromArticles ?? 30))}
+                  value={marginPctInput}
+                  onChange={(e) => setMarginPctInput(e.target.value)}
+                />
+              </Field>
+              <Field label="Ø Bestellwert CHF" hint="Aus den letzten Bestellungen.">
+                <Input value={formatCHF(avgOrderValue)} disabled />
+              </Field>
+            </div>
+
+            {avgOrderValue > 0 && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <StatCard label="Marge ohne Aktion" value={formatCHF(sim.totalMarginNormal)} />
+                <StatCard
+                  label="Marge mit Aktion"
+                  value={formatCHF(sim.totalMarginDiscounted)}
+                  tone={sim.totalMarginDiscounted >= sim.totalMarginNormal ? 'positive' : 'negative'}
+                />
+                <StatCard
+                  label="Zusätzlich nötige Bestellungen"
+                  value={
+                    sim.extraOrdersNeeded != null
+                      ? `+${Math.ceil(sim.extraOrdersNeeded)}`
+                      : 'nicht erreichbar'
+                  }
+                  hint="um die gleiche Marge wie ohne Aktion zu erzielen"
+                  tone={sim.extraOrdersNeeded == null ? 'negative' : undefined}
+                />
+              </div>
+            )}
+          </Card>
         </div>
       )}
     </>
