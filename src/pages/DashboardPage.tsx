@@ -1,13 +1,16 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { BellRing, ShoppingBag } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge, Card, EmptyState, Skeleton, TableWrap } from '@/components/ui'
 import { DataTable, Td, Th, Tr } from '@/components/DataTable'
 import { StatCard } from '@/components/StatCard'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useDocuments } from '@/hooks/useDocuments'
 import { SHOPIFY_STATUS, useShopifyOrders, type ShopifyOrderDoc } from '@/hooks/useShopify'
+import { isOverdue } from '@/lib/dunning'
+import { amountPaid } from '@/lib/documentTotals'
 import { formatCHF, formatDate } from '@/lib/format'
 
 /** "Cap 10×, +1 weitere" — a compact summary of an order's line items. */
@@ -26,9 +29,13 @@ export function DashboardPage() {
   const { data: transactions, isLoading } = useTransactions(year)
   const { data: accounts } = useAccounts()
   const { data: shopifyOrders } = useShopifyOrders()
+  const { data: invoices } = useDocuments('rechnung')
   const openShopifyCount = (shopifyOrders ?? []).filter((o) => o.bookingStatus === 'open').length
   // useShopifyOrders() is already sorted newest-first (orderedAt desc).
   const recentOrders = (shopifyOrders ?? []).slice(0, 10)
+
+  const overdue = useMemo(() => (invoices ?? []).filter((d) => isOverdue(d)), [invoices])
+  const overdueTotal = overdue.reduce((s, d) => s + (d.total - amountPaid(d)), 0)
 
   const stats = useMemo(() => {
     const monthly = MONTHS.map(() => ({ inc: 0, exp: 0 }))
@@ -61,15 +68,29 @@ export function DashboardPage() {
         />
       ) : (
         <div className="space-y-6">
-          {openShopifyCount > 0 && (
-            <Link
-              to="/shopify"
-              className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-colors hover:bg-amber-100"
-            >
-              <ShoppingBag className="size-4 shrink-0" />
-              {openShopifyCount} Shopify-Bestellung{openShopifyCount === 1 ? '' : 'en'} noch nicht
-              verbucht →
-            </Link>
+          {(openShopifyCount > 0 || overdue.length > 0) && (
+            <div className="space-y-2">
+              {overdue.length > 0 && (
+                <Link
+                  to="/mahnwesen"
+                  className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 transition-colors hover:bg-red-100"
+                >
+                  <BellRing className="size-4 shrink-0" />
+                  {overdue.length} überfällige Rechnung{overdue.length === 1 ? '' : 'en'} ·{' '}
+                  {formatCHF(overdueTotal)} offen →
+                </Link>
+              )}
+              {openShopifyCount > 0 && (
+                <Link
+                  to="/shopify"
+                  className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+                >
+                  <ShoppingBag className="size-4 shrink-0" />
+                  {openShopifyCount} Shopify-Bestellung{openShopifyCount === 1 ? '' : 'en'} noch nicht
+                  verbucht →
+                </Link>
+              )}
+            </div>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard label="Einnahmen" value={formatCHF(stats.inc)} tone="positive" />

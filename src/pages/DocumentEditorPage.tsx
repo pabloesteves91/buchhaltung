@@ -547,6 +547,14 @@ export function DocumentEditorPage() {
                 ))}
               </datalist>
             )}
+            <div className="hidden gap-2 pb-1 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-[1fr_70px_60px_80px_60px_28px]">
+              <span>Bezeichnung</span>
+              <span>Menge</span>
+              <span>Einheit</span>
+              <span>Preis CHF</span>
+              <span>Rab. %</span>
+              <span />
+            </div>
             <div className="space-y-2">
               {state.lineItems.map((it, idx) => (
                 <div

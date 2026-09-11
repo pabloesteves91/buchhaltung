@@ -94,6 +94,20 @@ const styles = StyleSheet.create({
     color: '#8a94a1',
     textAlign: 'center',
   },
+  // Faint, diagonal watermark on every page of a draft — makes it visually
+  // unmistakable so an unfinished document is never sent by mistake.
+  draftWatermark: {
+    position: 'absolute',
+    top: '44%',
+    left: -120,
+    right: -120,
+    textAlign: 'center',
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 92,
+    color: '#1a1d23',
+    opacity: 0.07,
+    transform: 'rotate(-30deg)',
+  },
 })
 
 function companyAddressLines(s: CompanySettings): string[] {
@@ -147,6 +161,11 @@ export function DocumentPdf({
       producer="nipponnites Buchhaltung"
     >
       <Page size="A4" style={withQr ? [styles.page, styles.pageWithQr] : styles.page}>
+        {d.status === 'entwurf' && (
+          <Text style={styles.draftWatermark} fixed>
+            ENTWURF
+          </Text>
+        )}
         <View style={styles.headerRow}>
           {settings.logoDataUrl ? (
             <Image src={settings.logoDataUrl} style={styles.logo} />
