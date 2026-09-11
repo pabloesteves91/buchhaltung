@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
 function companyAddressLines(s: CompanySettings): string[] {
   return [
     s.name,
+    s.contactPerson,
     s.address.line1,
     s.address.line2,
     `${s.address.zip} ${s.address.city}`.trim(),

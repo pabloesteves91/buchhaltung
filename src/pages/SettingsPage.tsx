@@ -213,6 +213,16 @@ export function SettingsPage() {
                 onChange={(e) => set('bank', { ...form.bank, qrIban: e.target.value })}
               />
             </Field>
+            <Field
+              label="Kontoinhaber"
+              hint="Nur ausfüllen, falls das Konto nicht auf die Firma lautet (z.B. Privatkonto). Erscheint auf dem QR-Zahlteil unter „Konto / Zahlbar an“ statt der Firma."
+            >
+              <Input
+                value={form.bank.accountHolder ?? ''}
+                onChange={(e) => set('bank', { ...form.bank, accountHolder: e.target.value })}
+                placeholder={form.name}
+              />
+            </Field>
           </div>
         </Card>
 

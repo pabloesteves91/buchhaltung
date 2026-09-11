@@ -25,7 +25,7 @@ export function qrBillData(
     amount: d.total > 0 ? d.total : undefined,
     creditor: {
       account: rawAccount,
-      name: settings.name,
+      name: settings.bank.accountHolder || settings.name,
       address: s.line1 || settings.name,
       zip: s.zip,
       city: s.city,

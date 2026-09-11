@@ -260,6 +260,10 @@ export interface CompanySettings {
     name?: string
     iban?: string
     qrIban?: string
+    /** Name of the account holder as registered with the bank, if it differs
+     *  from the company name (e.g. a private account). Shown as "Konto /
+     *  Zahlbar an" on the QR-bill payment part. Falls back to `name`. */
+    accountHolder?: string
   }
   invoice: {
     defaultPaymentTermDays: number
