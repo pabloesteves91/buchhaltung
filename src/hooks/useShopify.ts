@@ -12,6 +12,18 @@ export type ShopifyBookingStatus =
   | 'refunded'
   | 'refund_pending'
 
+/** Shared label/tone map for booking status badges (ShopifyPage, Übersicht, …). */
+export const SHOPIFY_STATUS: Record<
+  ShopifyBookingStatus,
+  { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }
+> = {
+  open: { label: 'Nicht verbucht', tone: 'amber' },
+  booked: { label: 'Verbucht', tone: 'green' },
+  cancelled: { label: 'Storniert', tone: 'slate' },
+  refunded: { label: 'Retoure verbucht', tone: 'blue' },
+  refund_pending: { label: 'Retoure offen', tone: 'red' },
+}
+
 export interface ShopifyOrderDoc {
   id: string
   orderId: string

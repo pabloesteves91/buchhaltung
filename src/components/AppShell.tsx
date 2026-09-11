@@ -77,14 +77,13 @@ function SidebarContent({
           <img
             src={settings.logoUrl}
             alt={settings.name || 'Logo'}
-            className="mb-1 max-h-12 max-w-[9rem] object-contain"
+            className="max-h-20 max-w-[12rem] object-contain"
           />
         ) : (
           <p className="text-lg font-bold tracking-tight text-foreground">
             {settings?.name || 'nipponnites'}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">Buchhaltung</p>
       </div>
 
       {onSearch && (

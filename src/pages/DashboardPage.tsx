@@ -1,22 +1,34 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Card, EmptyState, Skeleton } from '@/components/ui'
+import { Badge, Card, EmptyState, Skeleton, TableWrap } from '@/components/ui'
+import { DataTable, Td, Th, Tr } from '@/components/DataTable'
 import { StatCard } from '@/components/StatCard'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
-import { useShopifyOrders } from '@/hooks/useShopify'
-import { formatCHF } from '@/lib/format'
+import { SHOPIFY_STATUS, useShopifyOrders, type ShopifyOrderDoc } from '@/hooks/useShopify'
+import { formatCHF, formatDate } from '@/lib/format'
+
+/** "Cap 10×, +1 weitere" — a compact summary of an order's line items. */
+function productSummary(items: ShopifyOrderDoc['lineItems']): string {
+  if (!items || items.length === 0) return '–'
+  const [first, ...rest] = items
+  const label = first.quantity > 1 ? `${first.title} ×${first.quantity}` : first.title
+  return rest.length > 0 ? `${label} +${rest.length} weitere` : label
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
 export function DashboardPage() {
+  const navigate = useNavigate()
   const year = new Date().getFullYear()
   const { data: transactions, isLoading } = useTransactions(year)
   const { data: accounts } = useAccounts()
   const { data: shopifyOrders } = useShopifyOrders()
   const openShopifyCount = (shopifyOrders ?? []).filter((o) => o.bookingStatus === 'open').length
+  // useShopifyOrders() is already sorted newest-first (orderedAt desc).
+  const recentOrders = (shopifyOrders ?? []).slice(0, 10)
 
   const stats = useMemo(() => {
     const monthly = MONTHS.map(() => ({ inc: 0, exp: 0 }))
@@ -98,6 +110,48 @@ export function DashboardPage() {
               </div>
             )}
           </Card>
+
+          {recentOrders.length > 0 && (
+            <Card title="Neueste Bestellungen">
+              <TableWrap>
+                <DataTable
+                  minWidth={480}
+                  head={
+                    <>
+                      <Th>Bestellung</Th>
+                      <Th>Produkt</Th>
+                      <Th align="right">Betrag</Th>
+                      <Th align="right">Status</Th>
+                    </>
+                  }
+                >
+                  {recentOrders.map((o) => (
+                    <Tr
+                      key={o.id}
+                      interactive
+                      onClick={() => navigate(`/shopify/bestellung/${o.id}`)}
+                    >
+                      <Td className="font-medium text-foreground">
+                        {o.orderName}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {formatDate(o.date)}
+                        </span>
+                      </Td>
+                      <Td className="text-muted-foreground">{productSummary(o.lineItems)}</Td>
+                      <Td align="right" className="font-medium">
+                        {formatCHF(o.total)}
+                      </Td>
+                      <Td align="right">
+                        <Badge tone={SHOPIFY_STATUS[o.bookingStatus].tone}>
+                          {SHOPIFY_STATUS[o.bookingStatus].label}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </DataTable>
+              </TableWrap>
+            </Card>
+          )}
         </div>
       )}
     </>

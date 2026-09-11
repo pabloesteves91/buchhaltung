@@ -9,6 +9,7 @@ import { Badge, Button, Card, EmptyState, Field, Input, Select, Skeleton, TableW
 import { cn } from '@/lib/cn'
 import { useAccounts } from '@/hooks/useAccounts'
 import {
+  SHOPIFY_STATUS,
   useSaveShopifyConfig,
   useShopifyActions,
   useShopifyConfig,
@@ -25,14 +26,6 @@ function friendlyError(e: unknown): string {
     return 'Cloud Function nicht erreichbar. Ist der letzte Deploy schon durch (Actions-Tab in GitHub)?'
   }
   return message
-}
-
-const STATUS: Record<ShopifyBookingStatus, { label: string; tone: 'slate' | 'green' | 'amber' | 'red' | 'blue' }> = {
-  open: { label: 'Nicht verbucht', tone: 'amber' },
-  booked: { label: 'Verbucht', tone: 'green' },
-  cancelled: { label: 'Storniert', tone: 'slate' },
-  refunded: { label: 'Retoure verbucht', tone: 'blue' },
-  refund_pending: { label: 'Retoure offen', tone: 'red' },
 }
 
 const FILTERS: { key: ShopifyBookingStatus | 'all'; label: string }[] = [
@@ -514,8 +507,8 @@ export function ShopifyPage() {
                         </td>
                         <td className="py-2 text-right">{formatCHF(o.total)}</td>
                         <td className="py-2 text-right">
-                          <Badge tone={STATUS[o.bookingStatus].tone}>
-                            {STATUS[o.bookingStatus].label}
+                          <Badge tone={SHOPIFY_STATUS[o.bookingStatus].tone}>
+                            {SHOPIFY_STATUS[o.bookingStatus].label}
                           </Badge>
                         </td>
                         <td className="py-2 text-right">
