@@ -51,9 +51,12 @@ export const testPrintfulConnection = onCall(
   { region: REGION },
   guard(async () => {
     const cfg = await getConfig()
-    const res = await printfulFetch(cfg, '/store')
-    const { result } = (await res.json()) as { result: { name: string } }
-    return { name: result.name }
+    // /store needs a "stores_list/read" scope that per-store tokens don't
+    // grant. /orders?limit=1 only needs "orders/read", which every token
+    // used for cost-import already has, so it doubles as a connection test.
+    const res = await printfulFetch(cfg, '/orders?limit=1')
+    const { paging } = (await res.json()) as { paging?: { total: number } }
+    return { orderCount: paging?.total ?? 0 }
   }),
 )
 

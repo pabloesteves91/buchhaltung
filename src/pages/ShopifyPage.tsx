@@ -648,7 +648,7 @@ function PrintfulCard() {
             <Badge tone={cfg.connected ? 'green' : 'amber'}>
               {cfg.connected ? (
                 <>
-                  <CheckCircle2 className="mr-1 inline size-3.5" /> {cfg.storeName || 'Verbunden'}
+                  <CheckCircle2 className="mr-1 inline size-3.5" /> Verbunden
                 </>
               ) : (
                 'Nicht getestet'
@@ -670,7 +670,7 @@ function PrintfulCard() {
                 setMsg(null)
                 try {
                   const r = await test.mutateAsync({})
-                  setMsg(`Verbunden mit „${r.name}“.`)
+                  setMsg(`Verbindung erfolgreich, ${r.orderCount} Bestellungen bei Printful gefunden.`)
                 } catch (e) {
                   setMsg(friendlyError(e))
                 }

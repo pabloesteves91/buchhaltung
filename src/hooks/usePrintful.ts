@@ -10,7 +10,7 @@ import { callable } from '@/hooks/useShopify'
 export interface PrintfulConfig {
   apiKey?: string
   connected?: boolean
-  storeName?: string
+  orderCount?: number
   lastImportAt?: string
 }
 
@@ -40,8 +40,9 @@ export function usePrintfulActions() {
   const qc = useQueryClient()
   return {
     test: useMutation({
-      mutationFn: callable<Record<string, never>, { name: string }>('testPrintfulConnection'),
-      onSuccess: (r) => void setDoc(configRef(), { connected: true, storeName: r.name }, { merge: true }),
+      mutationFn: callable<Record<string, never>, { orderCount: number }>('testPrintfulConnection'),
+      onSuccess: (r) =>
+        void setDoc(configRef(), { connected: true, orderCount: r.orderCount }, { merge: true }),
     }),
     importCosts: useMutation({
       mutationFn: callable<{ sinceDays: number }, { updated: number; skipped: number }>(
