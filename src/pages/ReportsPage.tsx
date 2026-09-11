@@ -205,7 +205,7 @@ export function ReportsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Top-Kunden">
               {customers.length === 0 ? (
-                <p className="py-3 text-sm text-muted-foreground">Keine Daten.</p>
+                <EmptyState compact title="Keine Daten" />
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
@@ -233,7 +233,7 @@ export function ReportsPage() {
 
             <Card title="Rabatte (Shopify)">
               {discounts.length === 0 ? (
-                <p className="py-3 text-sm text-muted-foreground">Keine Rabatte verwendet.</p>
+                <EmptyState compact title="Keine Rabatte verwendet" />
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
@@ -257,7 +257,7 @@ export function ReportsPage() {
 
             <Card title="Top-Produkte (Shopify)">
               {products.length === 0 ? (
-                <p className="py-3 text-sm text-muted-foreground">Keine Daten.</p>
+                <EmptyState compact title="Keine Daten" />
               ) : (
                 <TableWrap>
                   <table className="w-full text-sm">
@@ -290,7 +290,7 @@ function CategoryTable({
   lines: { number: string; name: string; amount: number }[]
   tone: 'green' | 'red'
 }) {
-  if (lines.length === 0) return <p className="py-3 text-sm text-muted-foreground">Keine Buchungen.</p>
+  if (lines.length === 0) return <EmptyState compact title="Keine Buchungen" />
   const total = lines.reduce((s, l) => s + l.amount, 0)
   return (
     <table className="w-full text-sm">

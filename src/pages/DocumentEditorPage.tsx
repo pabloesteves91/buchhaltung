@@ -461,8 +461,8 @@ export function DocumentEditorPage() {
                 </Button>
               </>
             )}
-            <Button onClick={() => save()} disabled={saving}>
-              {saving ? 'Speichern …' : 'Speichern'}
+            <Button onClick={() => save()} disabled={saving} loading={saving}>
+              Speichern
             </Button>
           </div>
         }
@@ -995,8 +995,8 @@ export function DocumentEditorPage() {
             <p className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{emailError}</p>
           )}
           <div className="flex gap-2">
-            <Button onClick={sendEmail} disabled={emailBusy || !emailForm.to}>
-              {emailBusy ? 'Senden …' : 'Senden'}
+            <Button onClick={sendEmail} disabled={emailBusy || !emailForm.to} loading={emailBusy}>
+              Senden
             </Button>
             <Button
               variant="secondary"

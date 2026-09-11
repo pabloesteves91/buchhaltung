@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Pencil, Phone } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
-import { Badge, Button, Card, TableWrap } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, TableWrap } from '@/components/ui'
 import { StatCard } from '@/components/StatCard'
 import { cn } from '@/lib/cn'
 import { ContactFormModal, TYPE_LABEL } from '@/components/ContactFormModal'
@@ -153,7 +153,7 @@ export function ContactDetailPage() {
             actions={<Link to="/shopify" className="text-xs text-brand-600 hover:underline">Shopify</Link>}
           >
             {orders.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">Keine Bestellungen.</p>
+              <EmptyState compact title="Keine Bestellungen" />
             ) : (
               <TableWrap>
                 <table className="w-full min-w-[440px] text-sm">
@@ -190,7 +190,7 @@ export function ContactDetailPage() {
 
           <Card title="Offerten & Rechnungen">
             {docs.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">Keine Dokumente.</p>
+              <EmptyState compact title="Keine Dokumente" />
             ) : (
               <TableWrap>
                 <table className="w-full min-w-[440px] text-sm">

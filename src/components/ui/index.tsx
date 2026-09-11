@@ -230,15 +230,31 @@ export function EmptyState({
   title,
   description,
   action,
+  compact,
 }: {
   title: string
   description?: string
   action?: ReactNode
+  /** Slimmer, borderless variant for small sub-sections inside an existing Card. */
+  compact?: boolean
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
+    <div
+      className={cn(
+        'flex flex-col items-center gap-1.5 text-center',
+        compact
+          ? 'px-2 py-6'
+          : 'rounded-xl border border-dashed border-border bg-muted/50 px-6 py-12 gap-2',
+      )}
+    >
+      <p className={cn('font-semibold text-foreground', compact ? 'text-sm' : 'text-sm')}>
+        {title}
+      </p>
+      {description && (
+        <p className={cn('max-w-sm text-muted-foreground', compact ? 'text-xs' : 'text-sm')}>
+          {description}
+        </p>
+      )}
       {action}
     </div>
   )

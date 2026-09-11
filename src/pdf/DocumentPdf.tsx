@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   },
   pageWithQr: { paddingBottom: 320 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logo: { maxWidth: 150, maxHeight: 56, objectFit: 'contain' },
+  logo: { maxWidth: 150, maxHeight: 56, objectFit: 'contain', objectPosition: 'left' },
   companyBlock: { textAlign: 'right', fontSize: 8, color: '#55606e' },
   companyName: { fontFamily: 'Helvetica-Bold', fontSize: 10, color: '#1a1d23' },
   addressBlock: { marginTop: 56, fontSize: 10 },

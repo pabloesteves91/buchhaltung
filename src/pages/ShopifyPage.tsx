@@ -215,8 +215,14 @@ export function ShopifyPage() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={runTest} disabled={test.isPending}>
-                {test.isPending ? 'Teste …' : 'Verbindung testen'}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={runTest}
+                disabled={test.isPending}
+                loading={test.isPending}
+              >
+                Verbindung testen
               </Button>
               <Button
                 variant="secondary"
@@ -377,8 +383,9 @@ export function ShopifyPage() {
                   }
                 }}
                 disabled={importCustomers.isPending}
+                loading={importCustomers.isPending}
               >
-                {importCustomers.isPending ? 'Importiere …' : 'Alle Kunden importieren'}
+                Alle Kunden importieren
               </Button>
               <Button
                 variant="secondary"
@@ -392,8 +399,9 @@ export function ShopifyPage() {
                   }
                 }}
                 disabled={importProducts.isPending}
+                loading={importProducts.isPending}
               >
-                {importProducts.isPending ? 'Importiere …' : 'Produkte importieren'}
+                Produkte importieren
               </Button>
               <Button
                 variant="secondary"
@@ -407,8 +415,9 @@ export function ShopifyPage() {
                   }
                 }}
                 disabled={importPayouts.isPending}
+                loading={importPayouts.isPending}
               >
-                {importPayouts.isPending ? 'Importiere …' : 'Auszahlungen importieren'}
+                Auszahlungen importieren
               </Button>
               <Button
                 variant="secondary"
@@ -422,6 +431,7 @@ export function ShopifyPage() {
                   }
                 }}
                 disabled={registerWebhooks.isPending}
+                loading={registerWebhooks.isPending}
               >
                 Webhooks registrieren
               </Button>
@@ -459,6 +469,7 @@ export function ShopifyPage() {
                   )
                 }
                 disabled={book.isPending}
+                loading={book.isPending}
               >
                 Alle {openCount} verbuchen
               </Button>

@@ -117,7 +117,13 @@ export function NotesPage() {
             Anpinnen
           </label>
           <div className="flex gap-2">
-            <Button type="submit">Speichern</Button>
+            <Button
+              type="submit"
+              disabled={createNote.isPending || updateNote.isPending}
+              loading={createNote.isPending || updateNote.isPending}
+            >
+              Speichern
+            </Button>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Abbrechen
             </Button>

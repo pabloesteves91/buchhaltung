@@ -110,7 +110,9 @@ export function ProductsPage() {
               </Field>
             </div>
             <div className="sm:col-span-4 flex gap-2">
-              <Button type="submit">Speichern</Button>
+              <Button type="submit" disabled={createProduct.isPending} loading={createProduct.isPending}>
+                Speichern
+              </Button>
               <Button type="button" variant="ghost" onClick={() => setShowNew(false)}>
                 Abbrechen
               </Button>

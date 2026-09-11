@@ -160,7 +160,9 @@ export function AccountsPage() {
                   />
                 </Field>
                 <div className="col-span-2 flex gap-2 md:col-span-4">
-                  <Button type="submit">Speichern</Button>
+                  <Button type="submit" disabled={createAccount.isPending} loading={createAccount.isPending}>
+                    Speichern
+                  </Button>
                   <Button type="button" variant="ghost" onClick={() => setShowNew(false)}>
                     Abbrechen
                   </Button>

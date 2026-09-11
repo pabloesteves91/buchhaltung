@@ -85,9 +85,7 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : stats.inc === 0 && stats.exp === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Noch keine Buchungen in diesem Jahr.
-              </p>
+              <EmptyState compact title="Noch keine Buchungen in diesem Jahr" />
             ) : (
               <div className="flex items-end gap-2">
                 {stats.monthly.map((m, i) => (

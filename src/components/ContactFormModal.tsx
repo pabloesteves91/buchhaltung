@@ -203,7 +203,13 @@ export function ContactFormModal({
         </Field>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
-            <Button type="submit">Speichern</Button>
+            <Button
+              type="submit"
+              disabled={createContact.isPending || updateContact.isPending}
+              loading={createContact.isPending || updateContact.isPending}
+            >
+              Speichern
+            </Button>
             <Button type="button" variant="ghost" onClick={onClose}>
               Abbrechen
             </Button>

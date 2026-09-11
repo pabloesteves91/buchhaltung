@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useSettings } from '@/hooks/useSettings'
+import { useBrandFavicon } from '@/hooks/useBrandFavicon'
 import { cn } from '@/lib/cn'
 import { CommandPalette, useCommandPalette } from '@/components/CommandPalette'
 
@@ -146,6 +147,7 @@ export function AppShell() {
   const location = useLocation()
   const { data: settings } = useSettings()
   const [paletteOpen, setPaletteOpen] = useCommandPalette()
+  useBrandFavicon()
 
   // Close the mobile drawer on route change.
   useEffect(() => setOpen(false), [location.pathname])

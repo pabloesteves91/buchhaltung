@@ -172,8 +172,8 @@ export function ClosingPage() {
           <Lock className="size-4" />
           Geschäftsjahr {year} ist abgeschlossen (am {fy?.closedAt}). Buchungen bis {endOfYear} sind
           gesperrt.
-          <Button size="sm" variant="ghost" onClick={reopenYear} disabled={busy}>
-            <Unlock className="size-3.5" /> Sperre aufheben
+          <Button size="sm" variant="ghost" onClick={reopenYear} disabled={busy} loading={busy}>
+            {!busy && <Unlock className="size-3.5" />} Sperre aufheben
           </Button>
         </div>
       )}
@@ -273,8 +273,9 @@ export function ClosingPage() {
                     void closeYear()
                 }}
                 disabled={busy}
+                loading={busy}
               >
-                <Lock className="size-4" /> Jahr {year} abschliessen
+                {!busy && <Lock className="size-4" />} Jahr {year} abschliessen
               </Button>
             </>
           )}

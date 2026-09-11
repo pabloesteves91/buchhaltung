@@ -228,8 +228,8 @@ export function DunningPage() {
           </Field>
           {err && <p className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{err}</p>}
           <div className="flex gap-2">
-            <Button onClick={sendEmail} disabled={busy || !emailForm.to}>
-              <Send className="size-4" /> Senden
+            <Button onClick={sendEmail} disabled={busy || !emailForm.to} loading={busy}>
+              {!busy && <Send className="size-4" />} Senden
             </Button>
             <Button
               variant="secondary"
