@@ -112,6 +112,14 @@ export function SettingsPage() {
               </p>
             </div>
           </div>
+          {form.logoUrl && !form.logoDataUrl && (
+            <p className="mt-3 rounded-lg bg-amber-100 p-2 text-xs text-amber-900">
+              Das Logo ist im Menü sichtbar, aber noch nicht PDF-tauglich abgelegt (das war bei
+              einem älteren Upload noch nicht vorgesehen). Bitte oben einmal „Logo ersetzen"
+              wählen und dieselbe Datei erneut hochladen — danach erscheint es auch links oben auf
+              Offerten & Rechnungen.
+            </p>
+          )}
         </Card>
 
         <Card title="Firma">

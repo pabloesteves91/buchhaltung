@@ -6,9 +6,14 @@
 export async function toScaledPngDataUrl(file: File, maxSize = 600): Promise<string> {
   const dataUrl = await readAsDataUrl(file)
   const img = await loadImage(dataUrl)
-  const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
-  const w = Math.max(1, Math.round(img.width * scale))
-  const h = Math.max(1, Math.round(img.height * scale))
+  // Some browsers report 0 for naturalWidth/Height on an SVG with no explicit
+  // width/height/viewBox-derived size — fall back to maxSize rather than
+  // producing a 0×0 (unusable) canvas.
+  const srcW = img.naturalWidth || img.width || maxSize
+  const srcH = img.naturalHeight || img.height || maxSize
+  const scale = Math.min(1, maxSize / Math.max(srcW, srcH))
+  const w = Math.max(1, Math.round(srcW * scale))
+  const h = Math.max(1, Math.round(srcH * scale))
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
